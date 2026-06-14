@@ -1,7 +1,13 @@
 fastapi
-uvicorn
-sqlalchemy
-psycopg
-pydantic
+uvicorn[standard]
+sqlalchemy>=2.0
+pydantic[email]>=2.0
 pydantic-settings
 python-dotenv
+python-multipart
+python-jose[cryptography]
+bcrypt
+qrcode[pil]
+google-genai
+apscheduler
+pymupdf
