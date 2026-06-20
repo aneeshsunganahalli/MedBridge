@@ -12,6 +12,10 @@ class UpcomingAppointment(BaseModel):
     start_time: time
     end_time: time
     status: str
+    notes: Optional[str] = None
+    patient_name: str
+    doctor_name: str
+    clinic_name: str
 
     model_config = {"from_attributes": True}
 

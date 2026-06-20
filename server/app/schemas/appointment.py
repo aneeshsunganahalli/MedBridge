@@ -9,6 +9,7 @@ class AppointmentCreate(BaseModel):
     appointment_date: date
     start_time: time
     end_time: time
+    notes: Optional[str] = None
 
     @field_validator("end_time")
     @classmethod
@@ -31,6 +32,23 @@ class AppointmentResponse(BaseModel):
     doctor_id: int
     clinic_id: int
     appointment_date: date
+    start_time: time
+    end_time: time
+    status: str
+    notes: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class AppointmentDetailResponse(AppointmentResponse):
+    """Enriched response with resolved names for list views."""
+    patient_name: str
+    doctor_name: str
+    clinic_name: str
+
+
+class BookedSlotResponse(BaseModel):
+    """Slot info returned for availability checking."""
     start_time: time
     end_time: time
     status: str

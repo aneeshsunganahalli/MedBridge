@@ -1,17 +1,35 @@
 from datetime import datetime, date
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models import (
     User, Clinic, Appointment, Document, Reminder,
     AppointmentStatus,
 )
-from app.schemas.dashboard import DoctorDashboard, PatientDashboard
+from app.schemas.dashboard import DoctorDashboard, PatientDashboard, UpcomingAppointment
 from app.auth import get_current_user, require_role
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
+
+
+def _appt_to_dict(appt: Appointment) -> dict:
+    """Convert Appointment ORM to UpcomingAppointment-compatible dict with resolved names."""
+    return {
+        "id": appt.id,
+        "patient_id": appt.patient_id,
+        "doctor_id": appt.doctor_id,
+        "clinic_id": appt.clinic_id,
+        "appointment_date": appt.appointment_date,
+        "start_time": appt.start_time,
+        "end_time": appt.end_time,
+        "status": appt.status,
+        "notes": appt.notes,
+        "patient_name": appt.patient.full_name if appt.patient else "",
+        "doctor_name": appt.doctor.full_name if appt.doctor else "",
+        "clinic_name": appt.clinic.name if appt.clinic else "",
+    }
 
 
 @router.get("/doctor", response_model=DoctorDashboard)
@@ -31,6 +49,7 @@ def doctor_dashboard(
     # Upcoming: booked appointments from today onwards, ordered soonest first
     upcoming_appointments = (
         db.query(Appointment)
+        .options(joinedload(Appointment.patient), joinedload(Appointment.doctor), joinedload(Appointment.clinic))
         .filter(
             Appointment.doctor_id == current_user.id,
             Appointment.status == AppointmentStatus.booked,
@@ -44,6 +63,7 @@ def doctor_dashboard(
     # Recent: completed or past appointments, ordered most recent first
     recent_appointments = (
         db.query(Appointment)
+        .options(joinedload(Appointment.patient), joinedload(Appointment.doctor), joinedload(Appointment.clinic))
         .filter(
             Appointment.doctor_id == current_user.id,
             Appointment.appointment_date < today,
@@ -56,8 +76,8 @@ def doctor_dashboard(
     return DoctorDashboard(
         total_clinics=total_clinics,
         total_appointments=total_appointments,
-        upcoming_appointments=upcoming_appointments,
-        recent_appointments=recent_appointments,
+        upcoming_appointments=[_appt_to_dict(a) for a in upcoming_appointments],
+        recent_appointments=[_appt_to_dict(a) for a in recent_appointments],
     )
 
 
@@ -80,6 +100,7 @@ def patient_dashboard(
 
     upcoming_appointments = (
         db.query(Appointment)
+        .options(joinedload(Appointment.patient), joinedload(Appointment.doctor), joinedload(Appointment.clinic))
         .filter(
             Appointment.patient_id == current_user.id,
             Appointment.status == AppointmentStatus.booked,
@@ -105,6 +126,6 @@ def patient_dashboard(
     return PatientDashboard(
         total_documents=total_documents,
         total_appointments=total_appointments,
-        upcoming_appointments=upcoming_appointments,
+        upcoming_appointments=[_appt_to_dict(a) for a in upcoming_appointments],
         upcoming_reminders=upcoming_reminders,
     )

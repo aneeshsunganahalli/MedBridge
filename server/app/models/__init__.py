@@ -115,6 +115,7 @@ class Appointment(Base):
     status: str = Column(
         SAEnum(AppointmentStatus), default=AppointmentStatus.booked, nullable=False
     )
+    notes: str = Column(Text, nullable=True)
 
     # Relationships
     patient = relationship("User", back_populates="patient_appointments", foreign_keys=[patient_id])
