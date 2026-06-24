@@ -34,7 +34,7 @@ export default function RemindersPage() {
   const [reminders, setReminders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [form, setForm] = useState({ title: '', description: '', reminder_time: '', type: 'custom' });
+  const [form, setForm] = useState({ title: '', description: '', reminder_time: '', type: 'custom', is_recurring: false, recurrence_pattern: 'daily' });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -64,10 +64,12 @@ export default function RemindersPage() {
         description: form.description || null,
         reminder_time: new Date(form.reminder_time).toISOString(),
         type: form.type,
+        is_recurring: form.is_recurring,
+        recurrence_pattern: form.is_recurring ? form.recurrence_pattern : null,
       });
       toast.success('Reminder created');
       setDrawerOpen(false);
-      setForm({ title: '', description: '', reminder_time: '', type: 'custom' });
+      setForm({ title: '', description: '', reminder_time: '', type: 'custom', is_recurring: false, recurrence_pattern: 'daily' });
       load();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to create reminder');
@@ -133,7 +135,14 @@ export default function RemindersPage() {
             <span className="reminder-icon">{REMINDER_ICONS[rem.type] || REMINDER_ICONS.custom}</span>
             <div className="reminder-content">
               <div className="reminder-title">{rem.title}</div>
-              <div className="reminder-time">{formatRelativeTime(rem.reminder_time)}</div>
+              <div className="reminder-time">
+                {formatRelativeTime(rem.reminder_time)}
+                {rem.is_recurring && (
+                  <span style={{ marginLeft: 8, fontSize: '0.75rem', padding: '2px 6px', background: 'var(--color-background)', borderRadius: '999px', color: 'var(--color-accent)' }}>
+                    Repeats {rem.recurrence_pattern}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="reminder-actions">
               {deleteConfirm === rem.id ? (
@@ -209,6 +218,30 @@ export default function RemindersPage() {
           value={form.description}
           onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
         />
+        <div className="form-group" style={{ marginTop: '16px' }}>
+          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={form.is_recurring}
+              onChange={e => setForm(f => ({ ...f, is_recurring: e.target.checked }))}
+              style={{ accentColor: 'var(--color-accent)' }}
+            />
+            Make this a repeating reminder
+          </label>
+        </div>
+        {form.is_recurring && (
+          <Input
+            label="Repeats"
+            type="select"
+            value={form.recurrence_pattern}
+            onChange={e => setForm(f => ({ ...f, recurrence_pattern: e.target.value }))}
+          >
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+          </Input>
+        )}
       </Drawer>
     </PageWrapper>
   );

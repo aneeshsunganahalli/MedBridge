@@ -17,3 +17,9 @@ export const completeAppointment = (id) =>
 
 export const getBookedSlots = (doctorId, date) =>
   client.get(`/api/appointments/doctor/${doctorId}/slots`, { params: { date } });
+
+export const savePostVisitSummary = (id, summary) =>
+  client.patch(`/api/appointments/${id}/summary`, { summary });
+
+export const getAppointment = (id) =>
+  client.get(`/api/appointments/${id}`);

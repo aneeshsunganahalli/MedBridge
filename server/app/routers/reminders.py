@@ -23,6 +23,8 @@ def create_reminder(
         reminder_time=payload.reminder_time,
         type=payload.type,
         is_completed=False,
+        is_recurring=payload.is_recurring,
+        recurrence_pattern=payload.recurrence_pattern,
     )
     db.add(reminder)
     db.commit()
@@ -47,6 +49,35 @@ def update_reminder(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reminder not found")
 
     update_data = payload.model_dump(exclude_unset=True)
+    
+    # Handle recurring reminder completion
+    if "is_completed" in update_data and update_data["is_completed"] and not reminder.is_completed:
+        if reminder.is_recurring and reminder.recurrence_pattern:
+            from datetime import timedelta
+            
+            next_time = reminder.reminder_time
+            if reminder.recurrence_pattern == "daily":
+                next_time += timedelta(days=1)
+            elif reminder.recurrence_pattern == "weekly":
+                next_time += timedelta(weeks=1)
+            elif reminder.recurrence_pattern == "monthly":
+                next_time += timedelta(days=30)
+            elif reminder.recurrence_pattern == "yearly":
+                next_time += timedelta(days=365)
+            
+            # Create the next occurrence
+            next_reminder = Reminder(
+                patient_id=reminder.patient_id,
+                title=reminder.title,
+                description=reminder.description,
+                reminder_time=next_time,
+                type=reminder.type,
+                is_completed=False,
+                is_recurring=True,
+                recurrence_pattern=reminder.recurrence_pattern,
+            )
+            db.add(next_reminder)
+
     for field, value in update_data.items():
         setattr(reminder, field, value)
 

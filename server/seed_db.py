@@ -1,12 +1,12 @@
 import os
 import sys
 import random
-from datetime import date, time, timedelta
+from datetime import date, time, timedelta, datetime
 # Add server directory to path to allow absolute imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.database import SessionLocal, engine
-from app.models import Base, User, Clinic, DoctorSchedule, Appointment, UserRole, AppointmentStatus
+from app.models import Base, User, Clinic, DoctorSchedule, Appointment, UserRole, AppointmentStatus, Reminder, ReminderType
 from app.auth import hash_password
 
 def seed_db():
@@ -152,10 +152,41 @@ def seed_db():
                 start_time=start_time,
                 end_time=end_time,
                 status=status,
-                notes=random.choice(symptoms)
+                pre_clinic_concerns=random.choice(symptoms)
             )
             db.add(appt)
             
+        db.commit()
+
+        # --- 7. CREATE REMINDERS ---
+        for patient in patients_list:
+            # Recurring prescription fill
+            reminder_time = datetime.combine(today + timedelta(days=1), time(9, 0))
+            med_reminder = Reminder(
+                patient_id=patient.id,
+                title="Prescription Fill: Metformin",
+                description="Refill your diabetes medication at the local pharmacy.",
+                reminder_time=reminder_time,
+                type=ReminderType.medication,
+                is_completed=False,
+                is_recurring=True,
+                recurrence_pattern="monthly"
+            )
+            db.add(med_reminder)
+
+            # Daily pill
+            pill_reminder = Reminder(
+                patient_id=patient.id,
+                title="Take Morning Vitamins",
+                description="Vitamin D and B12",
+                reminder_time=datetime.combine(today, time(8, 0)),
+                type=ReminderType.medication,
+                is_completed=False,
+                is_recurring=True,
+                recurrence_pattern="daily"
+            )
+            db.add(pill_reminder)
+
         db.commit()
         
         print("\n==================================================")

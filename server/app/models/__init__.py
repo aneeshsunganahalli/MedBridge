@@ -115,7 +115,8 @@ class Appointment(Base):
     status: str = Column(
         SAEnum(AppointmentStatus), default=AppointmentStatus.booked, nullable=False
     )
-    notes: str = Column(Text, nullable=True)
+    pre_clinic_concerns: str = Column(Text, nullable=True)
+    post_visit_summary: str = Column(Text, nullable=True)
 
     # Relationships
     patient = relationship("User", back_populates="patient_appointments", foreign_keys=[patient_id])
@@ -187,6 +188,8 @@ class Reminder(Base):
     reminder_time: datetime = Column(DateTime, nullable=False)
     type: str = Column(SAEnum(ReminderType), default=ReminderType.custom, nullable=False)
     is_completed: bool = Column(Boolean, default=False, nullable=False)
+    is_recurring: bool = Column(Boolean, default=False, nullable=False)
+    recurrence_pattern: str = Column(String(50), nullable=True)
 
     # Relationships
     patient = relationship("User", back_populates="reminders")

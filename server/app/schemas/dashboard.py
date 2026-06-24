@@ -12,7 +12,8 @@ class UpcomingAppointment(BaseModel):
     start_time: time
     end_time: time
     status: str
-    notes: Optional[str] = None
+    pre_clinic_concerns: Optional[str] = None
+    post_visit_summary: Optional[str] = None
     patient_name: str
     doctor_name: str
     clinic_name: str

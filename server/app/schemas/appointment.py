@@ -9,7 +9,7 @@ class AppointmentCreate(BaseModel):
     appointment_date: date
     start_time: time
     end_time: time
-    notes: Optional[str] = None
+    pre_clinic_concerns: Optional[str] = None
 
     @field_validator("end_time")
     @classmethod
@@ -26,6 +26,10 @@ class AppointmentCreate(BaseModel):
         return v
 
 
+class AppointmentSummaryUpdate(BaseModel):
+    summary: str
+
+
 class AppointmentResponse(BaseModel):
     id: int
     patient_id: int
@@ -35,7 +39,8 @@ class AppointmentResponse(BaseModel):
     start_time: time
     end_time: time
     status: str
-    notes: Optional[str] = None
+    pre_clinic_concerns: Optional[str] = None
+    post_visit_summary: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

@@ -75,19 +75,30 @@ export default function PatientAppointments() {
             appointment={appt}
             nameField="doctor_name"
             actions={
-              tab === 'upcoming' && appt.status === 'booked' && (
-                cancelConfirm === appt.id ? (
-                  <div className="confirm-inline">
-                    <span>Cancel?</span>
-                    <Button size="sm" variant="danger" onClick={() => handleCancel(appt.id)}>Yes</Button>
-                    <Button size="sm" variant="ghost" onClick={() => setCancelConfirm(null)}>No</Button>
-                  </div>
-                ) : (
-                  <Button size="sm" variant="secondary" onClick={() => setCancelConfirm(appt.id)}>Cancel</Button>
-                )
-              )
+              <>
+                {tab === 'upcoming' && appt.status === 'booked' && (
+                  cancelConfirm === appt.id ? (
+                    <div className="confirm-inline">
+                      <span>Cancel?</span>
+                      <Button size="sm" variant="danger" onClick={() => handleCancel(appt.id)}>Yes</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setCancelConfirm(null)}>No</Button>
+                    </div>
+                  ) : (
+                    <Button size="sm" variant="secondary" onClick={() => setCancelConfirm(appt.id)}>Cancel</Button>
+                  )
+                )}
+                {appt.status === 'completed' && appt.post_visit_summary && (
+                  <Button size="sm" variant="primary" onClick={() => navigate(`/appointments/${appt.id}/summary`)}>View Summary</Button>
+                )}
+              </>
             }
-          />
+          >
+            {appt.pre_clinic_concerns && (
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                <strong>Reason for visit:</strong> {appt.pre_clinic_concerns}
+              </div>
+            )}
+          </AppointmentCard>
         ))
       ) : (
         <EmptyState

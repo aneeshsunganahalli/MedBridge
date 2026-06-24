@@ -15,6 +15,7 @@ import SharedDocumentsPage from './pages/documents/SharedDocumentsPage';
 import SharedWithMePage from './pages/documents/SharedWithMePage';
 import QRCodePage from './pages/documents/QRCodePage';
 import RemindersPage from './pages/reminders/RemindersPage';
+import PostVisitSummaryPage from './pages/appointments/PostVisitSummaryPage';
 
 function ProtectedRoute({ children, allowedRole }) {
   const { user, loading } = useAuth();
@@ -95,6 +96,11 @@ export default function App() {
       <Route path="/clinics" element={
         <ProtectedRoute allowedRole="doctor">
           <AppShell><ManageClinicsPage /></AppShell>
+        </ProtectedRoute>
+      } />
+      <Route path="/appointments/:id/summary" element={
+        <ProtectedRoute allowedRole="doctor">
+          <AppShell><PostVisitSummaryPage /></AppShell>
         </ProtectedRoute>
       } />
 

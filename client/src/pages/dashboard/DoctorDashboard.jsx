@@ -7,8 +7,10 @@ import EmptyState from '../../components/ui/EmptyState';
 import { useToast } from '../../components/ui/Toast';
 import { getDoctorDashboard } from '../../api/dashboard';
 import { completeAppointment } from '../../api/appointments';
+import { useNavigate } from 'react-router-dom';
 
 export default function DoctorDashboard() {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
@@ -89,7 +91,13 @@ export default function DoctorDashboard() {
                     </Button>
                   )
                 }
-              />
+              >
+                {appt.pre_clinic_concerns && (
+                  <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                    <strong>Reason for visit:</strong> {appt.pre_clinic_concerns}
+                  </div>
+                )}
+              </AppointmentCard>
             ))
           ) : (
             <EmptyState title="No upcoming appointments" message="Your upcoming appointments will appear here." />
@@ -102,7 +110,24 @@ export default function DoctorDashboard() {
           </div>
           {data?.recent_appointments?.length ? (
             data.recent_appointments.slice(0, 5).map(appt => (
-              <AppointmentCard key={appt.id} appointment={appt} nameField="patient_name" />
+              <AppointmentCard
+                key={appt.id}
+                appointment={appt}
+                nameField="patient_name"
+                actions={
+                  appt.status === 'completed' && (
+                    <Button size="sm" variant="primary" onClick={() => navigate(`/appointments/${appt.id}/summary`)}>
+                      {appt.post_visit_summary ? 'View Summary' : 'Write Summary'}
+                    </Button>
+                  )
+                }
+              >
+                {appt.pre_clinic_concerns && (
+                  <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                    <strong>Reason for visit:</strong> {appt.pre_clinic_concerns}
+                  </div>
+                )}
+              </AppointmentCard>
             ))
           ) : (
             <EmptyState title="No recent appointments" message="Past appointments will appear here." />

@@ -100,11 +100,11 @@ export default function QRCodePage() {
             background: '#fafafa',
             marginBottom: '2rem'
           }}>
-            <img src={qrUrl} alt="QR Code" style={{ width: '250px', height: '250px', display: 'block' }} />
+            <img src={qrUrl} alt="QR Code" style={{ width: '100%', maxWidth: '250px', height: 'auto', display: 'block' }} />
           </div>
         )}
         
-        <div style={{ display: 'flex', gap: '1rem', width: '100%', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', width: '100%', justifyContent: 'center', flexWrap: 'wrap' }}>
           <Button variant="secondary" onClick={() => navigate(-1)}>
             Go Back
           </Button>

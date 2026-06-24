@@ -108,7 +108,7 @@ export default function BookAppointmentPage() {
   const [bookedSlots, setBookedSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedClinic, setSelectedClinic] = useState(null);
-  const [notes, setNotes] = useState('');
+  const [preClinicConcerns, setPreClinicConcerns] = useState('');
   const [booking, setBooking] = useState(false);
   const [success, setSuccess] = useState(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -121,9 +121,13 @@ export default function BookAppointmentPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filteredDoctors = doctors.filter(d =>
-    d.full_name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredDoctors = doctors.filter(d => {
+    const q = search.toLowerCase();
+    const matchName = d.full_name.toLowerCase().includes(q);
+    const matchSpecialty = d.specialty?.toLowerCase().includes(q) || d.specialties?.some(s => s.toLowerCase().includes(q));
+    const matchClinic = d.clinics?.some(c => c.name.toLowerCase().includes(q));
+    return matchName || matchSpecialty || matchClinic;
+  });
 
   const handleSelectDoctor = (doctor) => {
     setSelectedDoctor(doctor);
@@ -168,7 +172,7 @@ export default function BookAppointmentPage() {
         appointment_date: selectedDate,
         start_time: selectedSlot.start,
         end_time: selectedSlot.end,
-        notes: notes || null,
+        pre_clinic_concerns: preClinicConcerns || null,
       });
       const clinicName = selectedDoctor.clinics.find(c => c.id === clinicId)?.name || '';
       setSuccess(`✓ Appointment confirmed for ${formatDate(selectedDate)} at ${selectedSlot.label} with ${selectedDoctor.full_name}${clinicName ? ` at ${clinicName}` : ''}`);
@@ -214,62 +218,85 @@ export default function BookAppointmentPage() {
         </div>
       </div>
 
-      {/* Step 1 — Doctor selection */}
-      <div className="booking-section">
-        <div className="search-bar">
-          <span className="search-bar-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-          </span>
-          <input
-            placeholder="Search doctors by name..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            id="search-doctors"
-          />
+      {currentStep > 1 && selectedDoctor && (
+        <div className="booking-summary-card" onClick={() => handleSelectDoctor(selectedDoctor)}>
+          <div className="summary-card-content">
+            <span className="summary-card-label">Selected Doctor</span>
+            <span className="summary-card-value">{selectedDoctor.full_name}</span>
+          </div>
+          <span className="summary-card-action">Change</span>
         </div>
+      )}
 
-        {filteredDoctors.length ? (
-          filteredDoctors.map(doc => (
-            <div
-              key={doc.id}
-              className={`doctor-card ${selectedDoctor?.id === doc.id ? 'selected' : ''}`}
-              onClick={() => handleSelectDoctor(doc)}
-            >
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                <img 
-                  src={localDoctors[(doc.id % 15)]?.image || localDoctors[0].image} 
-                  alt={doc.full_name} 
-                  style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', background: 'var(--color-background)' }} 
-                />
-                <div>
-                  <div className="doctor-card-name">{doc.full_name}</div>
-                  <div className="doctor-card-clinic">
-                    {doc.clinics.map(c => c.name).join(', ') || 'No clinic listed'}
-                    {doc.clinics[0]?.address && ` · ${doc.clinics[0].address}`}
-                  </div>
-                  <div className="doctor-card-days">
-                    {[0, 1, 2, 3, 4, 5, 6].map(d => {
-                      const isAvail = doc.schedules.some(s => s.day_of_week === d && s.is_available);
-                      return (
-                        <span key={d} className={`day-pill ${isAvail ? 'available' : ''}`}>
-                          {getDayName(d)}
-                        </span>
-                      );
-                    })}
+      {/* Step 1 — Doctor selection */}
+      {currentStep === 1 && (
+        <div className="booking-section">
+          <div className="search-bar">
+            <span className="search-bar-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </span>
+            <input
+              placeholder="Search doctors by name..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              id="search-doctors"
+            />
+          </div>
+
+          {filteredDoctors.length ? (
+            filteredDoctors.map(doc => (
+              <div
+                key={doc.id}
+                className={`doctor-card ${selectedDoctor?.id === doc.id ? 'selected' : ''}`}
+                onClick={() => handleSelectDoctor(doc)}
+              >
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', minWidth: 0 }}>
+                  <img 
+                    src={localDoctors[(doc.id % 15)]?.image || localDoctors[0].image} 
+                    alt={doc.full_name} 
+                    className="appt-card-avatar"
+                    style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', background: 'var(--color-background)', flexShrink: 0 }} 
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <div className="doctor-card-name">{doc.full_name}</div>
+                    <div className="doctor-card-clinic">
+                      {doc.clinics.map(c => c.name).join(', ') || 'No clinic listed'}
+                      {doc.clinics[0]?.address && ` · ${doc.clinics[0].address}`}
+                    </div>
+                    <div className="doctor-card-days">
+                      {[0, 1, 2, 3, 4, 5, 6].map(d => {
+                        const isAvail = doc.schedules.some(s => s.day_of_week === d && s.is_available);
+                        return (
+                          <span key={d} className={`day-pill ${isAvail ? 'available' : ''}`}>
+                            {getDayName(d)}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))
-        ) : (
-          <EmptyState title="No doctors found" message="Try a different search term." />
-        )}
-      </div>
+            ))
+          ) : (
+            <EmptyState title="No doctors found" message="Try a different search term." />
+          )}
+        </div>
+      )}
+
+      {currentStep > 2 && selectedDate && (
+        <div className="booking-summary-card" onClick={() => handleSelectDate(selectedDate)}>
+          <div className="summary-card-content">
+            <span className="summary-card-label">Selected Date</span>
+            <span className="summary-card-value">{formatDate(selectedDate)}</span>
+          </div>
+          <span className="summary-card-action">Change</span>
+        </div>
+      )}
 
       {/* Step 2 — Date selection */}
-      {selectedDoctor && (
+      {currentStep === 2 && selectedDoctor && (
         <div className="booking-section" style={{ marginTop: 24 }}>
           <h2 className="section-title" style={{ marginBottom: 16 }}>
             Select a date for {selectedDoctor.full_name}
@@ -285,7 +312,7 @@ export default function BookAppointmentPage() {
       )}
 
       {/* Step 3 — Slot selection */}
-      {selectedDate && (
+      {currentStep === 3 && selectedDate && (
         <div className="booking-section" style={{ marginTop: 24 }}>
           <h2 className="section-title" style={{ marginBottom: 16 }}>
             Available slots for {formatDate(selectedDate)}
@@ -321,8 +348,8 @@ export default function BookAppointmentPage() {
                     label="Reason for visit (optional)"
                     type="textarea"
                     placeholder="Brief description of your concern..."
-                    value={notes}
-                    onChange={e => setNotes(e.target.value)}
+                    value={preClinicConcerns}
+                    onChange={e => setPreClinicConcerns(e.target.value)}
                   />
                   <Button variant="primary" loading={booking} onClick={handleBook} style={{ marginTop: 8 }}>
                     Confirm Appointment
@@ -331,10 +358,12 @@ export default function BookAppointmentPage() {
               )}
             </>
           )}
+        </div>
+      )}
 
-          {success && (
-            <div className="booking-success">{success}</div>
-          )}
+      {success && (
+        <div className="booking-section" style={{ marginTop: 24 }}>
+          <div className="booking-success">{success}</div>
         </div>
       )}
       

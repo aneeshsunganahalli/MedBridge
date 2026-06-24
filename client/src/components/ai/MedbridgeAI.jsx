@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../ui/Toast';
 
@@ -70,7 +71,8 @@ export default function MedbridgeAI() {
           <span style={{marginLeft: '8px', fontWeight: 'bold'}}>Ask MedbridgeAI</span>
         </button>
       ) : (
-        <div className="ai-chat-window">
+        <div className="ai-modal-overlay" onClick={() => setIsOpen(false)}>
+          <div className="ai-chat-window" onClick={e => e.stopPropagation()}>
           <div className="ai-chat-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div className="ai-avatar">✨</div>
@@ -86,7 +88,11 @@ export default function MedbridgeAI() {
             {messages.map((msg, idx) => (
               <div key={idx} className={`ai-msg-row ${msg.role}`}>
                 <div className="ai-bubble">
-                  {msg.content}
+                  {msg.role === 'model' ? (
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  ) : (
+                    msg.content
+                  )}
                 </div>
               </div>
             ))}
@@ -105,7 +111,7 @@ export default function MedbridgeAI() {
               <select 
                 value={selectedDocId} 
                 onChange={(e) => setSelectedDocId(e.target.value)}
-                style={{ width: '100%', padding: '4px', fontSize: '12px', border: '1px solid #ccc', borderRadius: '4px' }}
+                className="ai-doc-select-input"
               >
                 <option value="">-- Attach a Document Context --</option>
                 {myDocuments.map(doc => (
@@ -134,6 +140,7 @@ export default function MedbridgeAI() {
               ➤
             </button>
           </div>
+        </div>
         </div>
       )}
     </div>

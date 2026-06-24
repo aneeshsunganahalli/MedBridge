@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PageWrapper from '../../components/Layout/PageWrapper';
 import AppointmentCard from '../../components/appointments/AppointmentCard';
 import Button from '../../components/ui/Button';
@@ -13,6 +14,7 @@ export default function DoctorAppointments() {
   const [tab, setTab] = useState('upcoming');
   const [cancelConfirm, setCancelConfirm] = useState(null);
   const toast = useToast();
+  const navigate = useNavigate();
 
   const load = async () => {
     try {
@@ -84,28 +86,40 @@ export default function DoctorAppointments() {
             appointment={appt}
             nameField="patient_name"
             actions={
-              tab === 'upcoming' && appt.status === 'booked' && (
-                <>
-                  <Button size="sm" variant="primary" onClick={() => handleComplete(appt.id)}>
-                    Mark Complete
+              <>
+                {tab === 'upcoming' && appt.status === 'booked' && (
+                  <>
+                    <Button size="sm" variant="primary" onClick={() => handleComplete(appt.id)}>
+                      Mark Complete
+                    </Button>
+                    {cancelConfirm === appt.id ? (
+                      <div className="confirm-inline">
+                        <span>Cancel?</span>
+                        <Button size="sm" variant="danger" onClick={() => handleCancel(appt.id)}>Yes</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setCancelConfirm(null)}>No</Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="secondary" onClick={() => setCancelConfirm(appt.id)}>Cancel</Button>
+                    )}
+                  </>
+                )}
+                {appt.status === 'completed' && (
+                  <Button size="sm" variant="primary" onClick={() => navigate(`/appointments/${appt.id}/summary`)}>
+                    {appt.post_visit_summary ? 'View Summary' : 'Write Summary'}
                   </Button>
-                  {cancelConfirm === appt.id ? (
-                    <div className="confirm-inline">
-                      <span>Cancel?</span>
-                      <Button size="sm" variant="danger" onClick={() => handleCancel(appt.id)}>Yes</Button>
-                      <Button size="sm" variant="ghost" onClick={() => setCancelConfirm(null)}>No</Button>
-                    </div>
-                  ) : (
-                    <Button size="sm" variant="secondary" onClick={() => setCancelConfirm(appt.id)}>Cancel</Button>
-                  )}
-                </>
-              )
+                )}
+              </>
             }
-          />
+          >
+            {appt.pre_clinic_concerns && (
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                <strong>Reason for visit:</strong> {appt.pre_clinic_concerns}
+              </div>
+            )}
+          </AppointmentCard>
         ))
       ) : (
         <EmptyState
-          icon={tab === 'upcoming' ? '🗓️' : '📋'}
           title={tab === 'upcoming' ? 'No upcoming appointments' : 'No past appointments'}
           message={tab === 'upcoming' ? 'Upcoming patient appointments will appear here.' : 'Completed appointments will show here.'}
         />
