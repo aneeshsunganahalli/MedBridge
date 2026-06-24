@@ -25,7 +25,7 @@ export default function LoginPage() {
     setLoading(true);
     setErrors({});
     try {
-      const user = await login(form.email, form.password);
+      const user = await login(form.email.trim(), form.password);
       navigate('/dashboard');
     } catch (err) {
       const msg = err.response?.data?.detail || 'Login failed';

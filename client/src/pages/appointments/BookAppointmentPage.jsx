@@ -8,6 +8,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import { useToast } from '../../components/ui/Toast';
 import { listDoctors } from '../../api/doctors';
 import { getBookedSlots, createAppointment } from '../../api/appointments';
+import { doctors as localDoctors } from '../../../assets/assets_frontend/assets';
 import { getDayName, formatDate, formatTime } from '../../utils/format';
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -216,7 +217,11 @@ export default function BookAppointmentPage() {
       {/* Step 1 — Doctor selection */}
       <div className="booking-section">
         <div className="search-bar">
-          <span className="search-bar-icon">🔍</span>
+          <span className="search-bar-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </span>
           <input
             placeholder="Search doctors by name..."
             value={search}
@@ -232,25 +237,34 @@ export default function BookAppointmentPage() {
               className={`doctor-card ${selectedDoctor?.id === doc.id ? 'selected' : ''}`}
               onClick={() => handleSelectDoctor(doc)}
             >
-              <div className="doctor-card-name">{doc.full_name}</div>
-              <div className="doctor-card-clinic">
-                {doc.clinics.map(c => c.name).join(', ') || 'No clinic listed'}
-                {doc.clinics[0]?.address && ` · ${doc.clinics[0].address}`}
-              </div>
-              <div className="doctor-card-days">
-                {[0, 1, 2, 3, 4, 5, 6].map(d => {
-                  const isAvail = doc.schedules.some(s => s.day_of_week === d && s.is_available);
-                  return (
-                    <span key={d} className={`day-pill ${isAvail ? 'available' : ''}`}>
-                      {getDayName(d)}
-                    </span>
-                  );
-                })}
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <img 
+                  src={localDoctors[(doc.id % 15)]?.image || localDoctors[0].image} 
+                  alt={doc.full_name} 
+                  style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', background: 'var(--color-background)' }} 
+                />
+                <div>
+                  <div className="doctor-card-name">{doc.full_name}</div>
+                  <div className="doctor-card-clinic">
+                    {doc.clinics.map(c => c.name).join(', ') || 'No clinic listed'}
+                    {doc.clinics[0]?.address && ` · ${doc.clinics[0].address}`}
+                  </div>
+                  <div className="doctor-card-days">
+                    {[0, 1, 2, 3, 4, 5, 6].map(d => {
+                      const isAvail = doc.schedules.some(s => s.day_of_week === d && s.is_available);
+                      return (
+                        <span key={d} className={`day-pill ${isAvail ? 'available' : ''}`}>
+                          {getDayName(d)}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           ))
         ) : (
-          <EmptyState icon="🩺" title="No doctors found" message="Try a different search term." />
+          <EmptyState title="No doctors found" message="Try a different search term." />
         )}
       </div>
 
@@ -323,6 +337,7 @@ export default function BookAppointmentPage() {
           )}
         </div>
       )}
+      
     </PageWrapper>
   );
 }

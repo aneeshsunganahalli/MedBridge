@@ -49,9 +49,9 @@ export default function PatientAppointments() {
   });
 
   const emptyMessages = {
-    upcoming: { icon: '📅', title: 'No upcoming appointments', msg: 'Book your first appointment to get started.', action: 'Book Appointment', to: '/book-appointment' },
-    past: { icon: '📋', title: 'No past appointments', msg: 'Your completed appointments will show here.' },
-    cancelled: { icon: '🚫', title: 'No cancelled appointments', msg: 'Cancelled appointments will appear here.' },
+    upcoming: { title: 'No upcoming appointments', msg: 'Book your first appointment to get started.', action: 'Book Appointment', to: '/book-appointment' },
+    past: { title: 'No past appointments', msg: 'Your completed appointments will show here.' },
+    cancelled: { title: 'No cancelled appointments', msg: 'Cancelled appointments will appear here.' },
   };
 
   if (loading) {
@@ -91,7 +91,6 @@ export default function PatientAppointments() {
         ))
       ) : (
         <EmptyState
-          icon={emptyMessages[tab].icon}
           title={emptyMessages[tab].title}
           message={emptyMessages[tab].msg}
           actionLabel={emptyMessages[tab].action}

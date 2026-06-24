@@ -13,8 +13,19 @@ export const uploadDocument = (formData) =>
 export const getDocument = (id) =>
   client.get(`/api/documents/${id}`);
 
-export const getDocumentFileUrl = (id) =>
-  `/api/documents/${id}/file`;
+export const getDocumentFileUrl = (id) => {
+  const token = localStorage.getItem('mb_token');
+  return `/api/documents/${id}/file${token ? `?token=${token}` : ''}`;
+};
+
+export const viewDocumentFile = async (id) => {
+  const res = await client.get(`/api/documents/${id}/file`, {
+    responseType: 'blob',
+  });
+  const blob = new Blob([res.data], { type: res.headers['content-type'] });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+};
 
 export const deleteDocument = (id) =>
   client.delete(`/api/documents/${id}`);

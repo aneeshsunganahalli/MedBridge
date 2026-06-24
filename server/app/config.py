@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # Gemini API
     GEMINI_API_KEY: str = Field(default="")
 
+    # Encryption
+    AES_SECRET_KEY: str = Field(default="medbridge-aes-key-please-replace")
+
     # File upload settings
     UPLOAD_DIR: str = Field(default="uploads")
 

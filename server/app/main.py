@@ -52,7 +52,7 @@ os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 # ── Register routers ────────────────────────────────────────────────────────
-from app.routers import auth, clinics, schedules, appointments, documents, sharing, reminders, dashboard, doctors
+from app.routers import auth, clinics, schedules, appointments, documents, sharing, reminders, dashboard, doctors, ai
 
 app.include_router(auth.router)
 app.include_router(clinics.router)
@@ -63,6 +63,7 @@ app.include_router(sharing.router)
 app.include_router(reminders.router)
 app.include_router(dashboard.router)
 app.include_router(doctors.router)
+app.include_router(ai.router)
 
 
 # ── Health check ─────────────────────────────────────────────────────────────

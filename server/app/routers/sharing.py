@@ -11,7 +11,7 @@ import qrcode
 from app.database import get_db
 from app.models import User, Document, ShareLink, ShareDocument
 from app.schemas.share import ShareLinkCreate, ShareLinkResponse, SharedDocumentResponse
-from app.auth import require_role
+from app.auth import require_role, get_current_user
 
 router = APIRouter(prefix="/api/sharing", tags=["Document Sharing"])
 
@@ -52,11 +52,16 @@ def create_share_link(
     token = uuid.uuid4().hex
     expires_at = datetime.utcnow() + timedelta(hours=payload.expires_in_hours)
 
+    allowed_emails_str = None
+    if payload.allowed_emails:
+        allowed_emails_str = ",".join([e.strip() for e in payload.allowed_emails if e.strip()])
+
     share_link = ShareLink(
         owner_id=current_user.id,
         token=token,
         expires_at=expires_at,
         is_folder_share=payload.is_folder_share,
+        allowed_emails=allowed_emails_str,
     )
     db.add(share_link)
     db.flush()
@@ -70,7 +75,7 @@ def create_share_link(
     db.refresh(share_link)
 
     base_url = str(request.base_url).rstrip("/")
-    share_url = f"{base_url}/api/sharing/access/{token}"
+    share_url = f"{base_url}/shared/{token}"
     qr_code_url = f"{base_url}/api/sharing/qr/{token}"
 
     return ShareLinkResponse(
@@ -79,20 +84,38 @@ def create_share_link(
         token=share_link.token,
         expires_at=share_link.expires_at,
         is_folder_share=share_link.is_folder_share,
+        allowed_emails=share_link.allowed_emails.split(",") if share_link.allowed_emails else None,
         share_url=share_url,
         qr_code_url=qr_code_url,
     )
 
 
 @router.get("/qr/{token}")
-def generate_qr_code(token: str, request: Request, db: Session = Depends(get_db)):
-    """Generate a QR code image for the share link (no auth required)."""
+def generate_qr_code(
+    token: str, 
+    request: Request, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Generate a QR code image for the share link. Requires auth."""
     share_link = db.query(ShareLink).filter(ShareLink.token == token).first()
     if not share_link:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share link not found")
 
-    base_url = str(request.base_url).rstrip("/")
-    share_url = f"{base_url}/api/sharing/access/{token}"
+    # Only allow owner or allowed emails to view the QR code
+    is_owner = (share_link.owner_id == current_user.id)
+    is_allowed = False
+    if share_link.allowed_emails:
+        allowed_list = [e.strip() for e in share_link.allowed_emails.split(",")]
+        is_allowed = current_user.email in allowed_list
+
+    if not is_owner and not is_allowed:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this QR code")
+
+    # Use frontend URL from settings instead of backend request.base_url
+    from app.config import settings
+    frontend_url = settings.BACKEND_CORS_ORIGINS[0] if settings.BACKEND_CORS_ORIGINS else str(request.base_url).rstrip("/")
+    share_url = f"{frontend_url}/shared/{token}"
 
     # Generate QR code in memory
     qr = qrcode.QRCode(version=1, box_size=10, border=4)
@@ -106,12 +129,47 @@ def generate_qr_code(token: str, request: Request, db: Session = Depends(get_db)
 
     return StreamingResponse(buffer, media_type="image/png")
 
+@router.get("/shared-with-me")
+def get_shared_with_me(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all active share links where the current user is in the allowed list."""
+    search_str = f"%{current_user.email}%"
+    links = db.query(ShareLink).filter(
+        ShareLink.expires_at > datetime.utcnow(),
+        ShareLink.allowed_emails.like(search_str)
+    ).all()
+    
+    valid_links = []
+    for link in links:
+        if link.allowed_emails:
+            emails = [e.strip() for e in link.allowed_emails.split(",")]
+            if current_user.email in emails:
+                valid_links.append(link)
+
+    result = []
+    for link in valid_links:
+        owner = db.query(User).filter(User.id == link.owner_id).first()
+        result.append({
+            "id": link.id,
+            "token": link.token,
+            "owner_name": owner.full_name if owner else "Unknown",
+            "is_folder_share": link.is_folder_share,
+            "expires_at": link.expires_at.isoformat()
+        })
+    return result
+
 
 @router.get("/access/{token}", response_model=SharedDocumentResponse)
-def access_shared_documents(token: str, db: Session = Depends(get_db)):
+def access_shared_documents(
+    token: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
-    Access shared documents via a public token (no auth required).
-    Returns read-only document metadata.
+    Access shared documents via a public token.
+    Requires login, checks allowed_emails if restricted.
     """
     share_link = db.query(ShareLink).filter(ShareLink.token == token).first()
     if not share_link:
@@ -120,6 +178,12 @@ def access_shared_documents(token: str, db: Session = Depends(get_db)):
     # Check expiration
     if datetime.utcnow() > share_link.expires_at:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Share link has expired")
+
+    # Check allowed emails
+    if share_link.allowed_emails:
+        allowed_list = share_link.allowed_emails.split(",")
+        if current_user.email not in allowed_list:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Your email is not in the allowed list.")
 
     owner = db.query(User).filter(User.id == share_link.owner_id).first()
 
@@ -156,16 +220,16 @@ def access_shared_documents(token: str, db: Session = Depends(get_db)):
         documents=doc_list,
     )
 
-
 @router.get("/access/{token}/documents/{document_id}/file")
 def get_shared_document_file(
     token: str,
     document_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> FileResponse:
     """
     Access and download a shared document file using the sharing token.
-    No login required (access controlled by token validation).
+    Requires login, checks allowed_emails.
     """
     share_link = db.query(ShareLink).filter(ShareLink.token == token).first()
     if not share_link:
@@ -180,6 +244,12 @@ def get_shared_document_file(
             status_code=status.HTTP_410_GONE,
             detail="Share link has expired",
         )
+
+    # Check allowed emails
+    if share_link.allowed_emails:
+        allowed_list = share_link.allowed_emails.split(",")
+        if current_user.email not in allowed_list:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     # Verify document belongs to the owner of this share link
     document = db.query(Document).filter(Document.id == document_id).first()

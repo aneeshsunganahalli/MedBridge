@@ -92,7 +92,7 @@ export default function DoctorDashboard() {
               />
             ))
           ) : (
-            <EmptyState icon="🗓️" title="No upcoming appointments" message="Your upcoming appointments will appear here." />
+            <EmptyState title="No upcoming appointments" message="Your upcoming appointments will appear here." />
           )}
         </div>
 
@@ -105,7 +105,7 @@ export default function DoctorDashboard() {
               <AppointmentCard key={appt.id} appointment={appt} nameField="patient_name" />
             ))
           ) : (
-            <EmptyState icon="📋" title="No recent appointments" message="Past appointments will appear here." />
+            <EmptyState title="No recent appointments" message="Past appointments will appear here." />
           )}
         </div>
       </div>

@@ -97,15 +97,39 @@ def ocr_pdf(file_path: str) -> str:
         return ""
 
 
-def run_ocr(file_path: str, mime_type: str) -> str:
-    """
-    Unified OCR entry point. Dispatches to image or PDF handler based on
-    the document's MIME type.
-    """
+def ocr_pdf_bytes(pdf_bytes: bytes) -> str:
+    """Extract text from PDF bytes."""
+    try:
+        client = _get_client()
+        if not client:
+            return ""
+
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        all_text: list[str] = []
+
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+            image_bytes = pix.tobytes("png")
+            page_text = _ocr_image_bytes(client, image_bytes, "image/png")
+            if page_text:
+                all_text.append(f"--- Page {page_num + 1} ---\n{page_text}")
+
+        doc.close()
+        return "\n\n".join(all_text)
+    except Exception as e:
+        logger.error(f"OCR failed for PDF bytes: {e}")
+        return ""
+
+def run_ocr_bytes(file_bytes: bytes, mime_type: str) -> str:
+    """Run OCR directly on raw bytes."""
     if mime_type == "application/pdf":
-        return ocr_pdf(file_path)
+        return ocr_pdf_bytes(file_bytes)
     elif mime_type.startswith("image/"):
-        return ocr_image(file_path, mime_type)
+        client = _get_client()
+        if not client:
+            return ""
+        return _ocr_image_bytes(client, file_bytes, mime_type)
     else:
         logger.warning(f"Unsupported MIME type for OCR: {mime_type}")
         return ""

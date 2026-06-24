@@ -11,6 +11,9 @@ import BookAppointmentPage from './pages/appointments/BookAppointmentPage';
 import PatientAppointments from './pages/appointments/PatientAppointments';
 import DoctorAppointments from './pages/appointments/DoctorAppointments';
 import DocumentsPage from './pages/documents/DocumentsPage';
+import SharedDocumentsPage from './pages/documents/SharedDocumentsPage';
+import SharedWithMePage from './pages/documents/SharedWithMePage';
+import QRCodePage from './pages/documents/QRCodePage';
 import RemindersPage from './pages/reminders/RemindersPage';
 
 function ProtectedRoute({ children, allowedRole }) {
@@ -41,10 +44,15 @@ function AppointmentsRouter() {
   return <PatientAppointments />;
 }
 
+import HomePage from './pages/HomePage';
+import MedbridgeAI from './components/ai/MedbridgeAI';
+
 export default function App() {
   return (
+    <>
     <Routes>
       {/* Public routes */}
+      <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
@@ -90,8 +98,27 @@ export default function App() {
         </ProtectedRoute>
       } />
 
+      {/* Shared documents (any logged-in user) */}
+      <Route path="/shared/:token" element={
+        <ProtectedRoute>
+          <AppShell><SharedDocumentsPage /></AppShell>
+        </ProtectedRoute>
+      } />
+      <Route path="/shared-with-me" element={
+        <ProtectedRoute>
+          <AppShell><SharedWithMePage /></AppShell>
+        </ProtectedRoute>
+      } />
+      <Route path="/share-qr/:token" element={
+        <ProtectedRoute>
+          <AppShell><QRCodePage /></AppShell>
+        </ProtectedRoute>
+      } />
+
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+    <MedbridgeAI />
+    </>
   );
 }

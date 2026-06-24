@@ -12,7 +12,6 @@ from app.database import get_db
 from app.models import User, Document, DocumentTag
 from app.schemas.document import DocumentResponse
 from app.auth import require_role
-from app.ocr import run_ocr
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +26,13 @@ ALLOWED_MIME_TYPES = {
 }
 
 
-def _save_upload(file: UploadFile, patient_id: int) -> tuple[str, str]:
+from app.utils.encryption import encrypt_data, decrypt_data
+
+def _save_upload(file: UploadFile, patient_id: int) -> tuple[str, str, bytes]:
     """
     Save an uploaded file to disk under uploads/{patient_id}/{uuid_filename}.
-    Returns (file_path, original_filename).
+    The file is encrypted with AES before being saved.
+    Returns (file_path, original_filename, content_bytes).
     """
     ext = os.path.splitext(file.filename or "file")[1]
     unique_name = f"{uuid.uuid4().hex}{ext}"
@@ -38,11 +40,16 @@ def _save_upload(file: UploadFile, patient_id: int) -> tuple[str, str]:
     os.makedirs(patient_dir, exist_ok=True)
 
     file_path = os.path.join(patient_dir, unique_name)
+    file.file.seek(0)
+    content = file.file.read()
+    
+    # Encrypt the content before writing to disk
+    encrypted_content = encrypt_data(content)
+    
     with open(file_path, "wb") as f:
-        content = file.file.read()
-        f.write(content)
+        f.write(encrypted_content)
 
-    return file_path, file.filename or "unknown"
+    return file_path, file.filename or "unknown", content
 
 
 @router.post("/", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
@@ -76,12 +83,13 @@ def upload_document(
         )
 
     # Save file to disk
-    file_path, original_filename = _save_upload(file, current_user.id)
+    file_path, original_filename, content_bytes = _save_upload(file, current_user.id)
 
-    # Run OCR automatically
+    # Run OCR automatically on raw bytes
     ocr_text = ""
     try:
-        ocr_text = run_ocr(file_path, file.content_type or "")
+        from app.ocr import run_ocr_bytes
+        ocr_text = run_ocr_bytes(content_bytes, file.content_type or "")
     except Exception as e:
         logger.error(f"OCR failed for {file_path}: {e}")
 
@@ -167,10 +175,13 @@ def delete_document(
 @router.get("/{document_id}/file")
 def get_document_file(
     document_id: int,
+    token: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("patient")),
 ) -> FileResponse:
-    """Serve the raw uploaded document file (patients only)."""
+    """Serve the raw uploaded document file (patients only).
+    Supports both Bearer header auth and ?token= query param for browser tab access.
+    """
     document = (
         db.query(Document)
         .filter(Document.id == document_id, Document.patient_id == current_user.id)
@@ -188,8 +199,21 @@ def get_document_file(
             detail="File not found on disk",
         )
 
-    return FileResponse(
-        path=document.file_path,
+    with open(document.file_path, "rb") as f:
+        encrypted_bytes = f.read()
+        
+    try:
+        decrypted_bytes = decrypt_data(encrypted_bytes)
+    except Exception as e:
+        logger.error(f"Failed to decrypt document {document.id}: {e}")
+        # Backwards compatibility: if it wasn't encrypted, just return the raw bytes
+        decrypted_bytes = encrypted_bytes
+
+    import io
+    from fastapi.responses import StreamingResponse
+
+    return StreamingResponse(
+        io.BytesIO(decrypted_bytes),
         media_type=document.mime_type,
-        filename=document.original_filename,
+        headers={"Content-Disposition": f'inline; filename="{document.original_filename}"'}
     )

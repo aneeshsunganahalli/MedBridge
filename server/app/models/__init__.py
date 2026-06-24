@@ -154,6 +154,7 @@ class ShareLink(Base):
     token: str = Column(String(255), unique=True, index=True, nullable=False)
     expires_at: datetime = Column(DateTime, nullable=False)
     is_folder_share: bool = Column(Boolean, default=False, nullable=False)
+    allowed_emails: str = Column(Text, nullable=True)
 
     # Relationships
     owner = relationship("User", back_populates="share_links")

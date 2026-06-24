@@ -7,6 +7,7 @@ class ShareLinkCreate(BaseModel):
     is_folder_share: bool = False
     document_ids: Optional[list[int]] = None  # Required when is_folder_share=False
     expires_in_hours: int = 24
+    allowed_emails: Optional[list[str]] = None
 
 
 class ShareLinkResponse(BaseModel):
@@ -15,6 +16,7 @@ class ShareLinkResponse(BaseModel):
     token: str
     expires_at: datetime
     is_folder_share: bool
+    allowed_emails: Optional[list[str]] = None
     share_url: str
     qr_code_url: str
 

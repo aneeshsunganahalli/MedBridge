@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
 import App from './App';
 import './styles.css';
+import './tailwind.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

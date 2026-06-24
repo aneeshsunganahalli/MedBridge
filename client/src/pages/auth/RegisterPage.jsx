@@ -69,7 +69,7 @@ export default function RegisterPage() {
                 onClick={() => setForm(f => ({ ...f, role: 'patient' }))}
                 id="role-patient"
               >
-                🧑 I'm a Patient
+                Patient
               </button>
               <button
                 type="button"
@@ -77,7 +77,7 @@ export default function RegisterPage() {
                 onClick={() => setForm(f => ({ ...f, role: 'doctor' }))}
                 id="role-doctor"
               >
-                🩺 I'm a Doctor
+                Doctor
               </button>
             </div>
             {errors.role && <div className="form-error">{errors.role}</div>}

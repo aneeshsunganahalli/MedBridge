@@ -1,0 +1,141 @@
+import React, { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../ui/Toast';
+
+export default function MedbridgeAI() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    { role: 'model', content: "Hi! I'm MedbridgeAI, your triage assistant. Can you tell me what symptoms you're experiencing today?" }
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [myDocuments, setMyDocuments] = useState([]);
+  const [selectedDocId, setSelectedDocId] = useState('');
+  const [showDocSelector, setShowDocSelector] = useState(false);
+
+  const messagesEndRef = useRef(null);
+  const { user } = useAuth();
+  const toast = useToast();
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (isOpen && myDocuments.length === 0) {
+      axios.get('/api/documents/', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('mb_token')}` }
+      })
+      .then(res => setMyDocuments(res.data))
+      .catch(err => console.error('Failed to load documents for AI', err));
+    }
+  }, [isOpen]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    const newMsgs = [...messages, { role: 'user', content: input }];
+    setMessages(newMsgs);
+    setInput('');
+    setLoading(true);
+
+    try {
+      const payload = { messages: newMsgs };
+      if (selectedDocId) {
+        payload.document_ids = [parseInt(selectedDocId, 10)];
+      }
+      
+      const res = await axios.post('/api/ai/chat', payload, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('mb_token')}` }
+      });
+      
+      setMessages([...newMsgs, { role: 'model', content: res.data.response }]);
+    } catch (err) {
+      toast.error('MedbridgeAI is currently unavailable.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="medbridge-ai-container">
+      {!isOpen ? (
+        <button className="ai-fab" onClick={() => setIsOpen(true)}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span style={{marginLeft: '8px', fontWeight: 'bold'}}>Ask MedbridgeAI</span>
+        </button>
+      ) : (
+        <div className="ai-chat-window">
+          <div className="ai-chat-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="ai-avatar">✨</div>
+              <div>
+                <strong>MedbridgeAI</strong>
+                <div style={{ fontSize: '11px', opacity: 0.8 }}>Triage Assistant</div>
+              </div>
+            </div>
+            <button className="ai-close-btn" onClick={() => setIsOpen(false)}>✕</button>
+          </div>
+          
+          <div className="ai-chat-messages">
+            {messages.map((msg, idx) => (
+              <div key={idx} className={`ai-msg-row ${msg.role}`}>
+                <div className="ai-bubble">
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div className="ai-msg-row model">
+                <div className="ai-bubble loading">
+                  <span className="dot">.</span><span className="dot">.</span><span className="dot">.</span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {showDocSelector && (
+            <div className="ai-doc-selector">
+              <select 
+                value={selectedDocId} 
+                onChange={(e) => setSelectedDocId(e.target.value)}
+                style={{ width: '100%', padding: '4px', fontSize: '12px', border: '1px solid #ccc', borderRadius: '4px' }}
+              >
+                <option value="">-- Attach a Document Context --</option>
+                {myDocuments.map(doc => (
+                  <option key={doc.id} value={doc.id}>{doc.title}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="ai-chat-input-area">
+            <button 
+              className="ai-icon-btn" 
+              onClick={() => setShowDocSelector(!showDocSelector)}
+              title="Attach Document"
+            >
+              📎
+            </button>
+            <input 
+              type="text" 
+              placeholder="Describe your symptoms..." 
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+            />
+            <button className="ai-send-btn" onClick={handleSend} disabled={loading}>
+              ➤
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
