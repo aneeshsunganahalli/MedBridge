@@ -16,6 +16,51 @@ export default function MedbridgeAI() {
   const [selectedDocId, setSelectedDocId] = useState('');
   const [showDocSelector, setShowDocSelector] = useState(false);
 
+  // Drag logic
+  const [position, setPosition] = useState({ right: 30, bottom: 30 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef(null);
+
+  const handlePointerDown = (e) => {
+    e.target.setPointerCapture(e.pointerId);
+    dragStart.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initRight: position.right,
+      initBottom: position.bottom
+    };
+    setIsDragging(false);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!dragStart.current) return;
+    const dx = e.clientX - dragStart.current.startX;
+    const dy = e.clientY - dragStart.current.startY;
+    
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      setIsDragging(true);
+    }
+    
+    setPosition({
+      right: dragStart.current.initRight - dx,
+      bottom: dragStart.current.initBottom - dy
+    });
+  };
+
+  const handlePointerUp = (e) => {
+    e.target.releasePointerCapture(e.pointerId);
+    dragStart.current = null;
+    setTimeout(() => setIsDragging(false), 50);
+  };
+
+  const handleClick = (e) => {
+    if (isDragging) {
+      e.preventDefault();
+      return;
+    }
+    setIsOpen(true);
+  };
+
   const messagesEndRef = useRef(null);
   const { user } = useAuth();
   const toast = useToast();
@@ -65,9 +110,20 @@ export default function MedbridgeAI() {
   };
 
   return (
-    <div className="medbridge-ai-container">
+    <div 
+      className="medbridge-ai-container"
+      style={!isOpen ? { right: `${position.right}px`, bottom: `${position.bottom}px` } : {}}
+    >
       {!isOpen ? (
-        <button className="ai-fab" onClick={() => setIsOpen(true)}>
+        <button 
+          className="ai-fab" 
+          onClick={handleClick}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          style={{ touchAction: 'none' }}
+        >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
           </svg>

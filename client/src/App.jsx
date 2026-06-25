@@ -50,7 +50,6 @@ function AppointmentsRouter() {
   return <PatientAppointments />;
 }
 
-import HomePage from './pages/HomePage';
 import MedbridgeAI from './components/ai/MedbridgeAI';
 
 export default function App() {
@@ -58,7 +57,7 @@ export default function App() {
     <>
     <Routes>
       {/* Public routes */}
-      <Route path="/" element={<HomePage />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/reception/:clinicId" element={<ReceptionPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
