@@ -29,6 +29,21 @@ def create_clinic(
     return clinic
 
 
+@router.get("/{clinic_id}/public")
+def get_clinic_public(clinic_id: int, db: Session = Depends(get_db)):
+    """Public endpoint to get basic clinic info for the reception page."""
+    clinic = db.query(Clinic).filter(Clinic.id == clinic_id).first()
+    if not clinic:
+        raise HTTPException(status_code=404, detail="Clinic not found")
+    
+    return {
+        "id": clinic.id,
+        "name": clinic.name,
+        "address": clinic.address,
+        "doctor_name": clinic.doctor.full_name if clinic.doctor else "Doctor"
+    }
+
+
 @router.put("/{clinic_id}", response_model=ClinicResponse)
 def update_clinic(
     clinic_id: int,

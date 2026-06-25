@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     # CORS settings
     BACKEND_CORS_ORIGINS: Union[list[str], str] = Field(default=["http://localhost:3000"])
 
+    # Twilio & SMS Triage settings
+    TWILIO_ACCOUNT_SID: str = Field(default="")
+    TWILIO_AUTH_TOKEN: str = Field(default="")
+    TWILIO_PHONE_NUMBER: str = Field(default="")
+    TWILIO_WHATSAPP_NUMBER: str = Field(default="")
+    APP_BASE_URL: str = Field(default="http://localhost:3000")
+
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Any) -> list[str]:

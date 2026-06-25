@@ -106,6 +106,24 @@ def upload_document(
     db.add(document)
     db.commit()
     db.refresh(document)
+    
+    # Trigger LLM Agent if it's a prescription
+    if doc_tag.value == "prescription":
+        from fastapi import BackgroundTasks
+        # We can either pass BackgroundTasks to the function or just execute in a separate thread.
+        # Since we don't have BackgroundTasks injected, we'll just import threading or run it directly for MVP
+        import threading
+        from app.agent import process_prescription_with_llm
+        from app.database import SessionLocal
+        
+        def run_agent(doc_id):
+            with SessionLocal() as local_db:
+                doc = local_db.query(Document).filter(Document.id == doc_id).first()
+                if doc:
+                    process_prescription_with_llm(doc, local_db)
+                    
+        threading.Thread(target=run_agent, args=(document.id,), daemon=True).start()
+
     return document
 
 

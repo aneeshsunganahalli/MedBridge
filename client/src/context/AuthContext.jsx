@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import * as authApi from '../api/auth';
+import { getMedicalProfile } from '../api/medical';
+import { saveSnapshot, clearSnapshot } from '../utils/offlineStore';
 
 const AuthContext = createContext(null);
 
@@ -28,6 +30,14 @@ export function AuthProvider({ children }) {
     localStorage.setItem('mb_token', access_token);
     const meRes = await authApi.getMe();
     setUser(meRes.data);
+    if (meRes.data.role === 'patient') {
+      try {
+        const medRes = await getMedicalProfile();
+        await saveSnapshot(medRes.data);
+      } catch (e) {
+        console.error('Failed to cache medical profile', e);
+      }
+    }
     return meRes.data;
   }, []);
 
@@ -39,6 +49,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     localStorage.removeItem('mb_token');
+    clearSnapshot();
     setUser(null);
     window.location.href = '/login';
   }, []);

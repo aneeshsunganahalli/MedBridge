@@ -11,3 +11,6 @@ export const updateReminder = (id, data) =>
 
 export const deleteReminder = (id) =>
   client.delete(`/api/reminders/${id}`);
+
+export const createSmartReminder = (prompt) =>
+  client.post('/api/reminders/smart', { prompt });

@@ -3,6 +3,7 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../ui/Toast';
+import { uploadDocument } from '../../api/documents';
 
 export default function MedbridgeAI() {
   const [isOpen, setIsOpen] = useState(false);
@@ -35,18 +36,20 @@ export default function MedbridgeAI() {
     }
   }, [isOpen]);
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  const handleSend = async (customMessage = null, docId = null) => {
+    const textToSend = customMessage || input;
+    if (!textToSend.trim()) return;
 
-    const newMsgs = [...messages, { role: 'user', content: input }];
+    const newMsgs = [...messages, { role: 'user', content: textToSend }];
     setMessages(newMsgs);
-    setInput('');
+    if (!customMessage) setInput('');
     setLoading(true);
 
     try {
       const payload = { messages: newMsgs };
-      if (selectedDocId) {
-        payload.document_ids = [parseInt(selectedDocId, 10)];
+      const contextDocId = docId || selectedDocId;
+      if (contextDocId) {
+        payload.document_ids = [parseInt(contextDocId, 10)];
       }
       
       const res = await axios.post('/api/ai/chat', payload, {
@@ -78,7 +81,7 @@ export default function MedbridgeAI() {
               <div className="ai-avatar">✨</div>
               <div>
                 <strong>MedbridgeAI</strong>
-                <div style={{ fontSize: '11px', opacity: 0.8 }}>Triage Assistant</div>
+                <div style={{ fontSize: '11px', opacity: 0.8 }}>Triage & Medicine Assistant</div>
               </div>
             </div>
             <button className="ai-close-btn" onClick={() => setIsOpen(false)}>✕</button>
@@ -135,8 +138,9 @@ export default function MedbridgeAI() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
+              disabled={loading}
             />
-            <button className="ai-send-btn" onClick={handleSend} disabled={loading}>
+            <button className="ai-send-btn" onClick={() => handleSend()} disabled={loading}>
               ➤
             </button>
           </div>

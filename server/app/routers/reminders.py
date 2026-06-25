@@ -32,6 +32,35 @@ def create_reminder(
     return reminder
 
 
+@router.post("/patient/{patient_id}", response_model=ReminderResponse, status_code=status.HTTP_201_CREATED)
+def create_reminder_for_patient(
+    patient_id: int,
+    payload: ReminderCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("doctor")),
+) -> ReminderResponse:
+    """Create a new reminder for a specific patient (doctors only)."""
+    # Verify patient exists
+    patient = db.query(User).filter(User.id == patient_id, User.role == "patient").first()
+    if not patient:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+
+    reminder = Reminder(
+        patient_id=patient_id,
+        title=payload.title,
+        description=payload.description,
+        reminder_time=payload.reminder_time,
+        type=payload.type,
+        is_completed=False,
+        is_recurring=payload.is_recurring,
+        recurrence_pattern=payload.recurrence_pattern,
+    )
+    db.add(reminder)
+    db.commit()
+    db.refresh(reminder)
+    return reminder
+
+
 @router.put("/{reminder_id}", response_model=ReminderResponse)
 def update_reminder(
     reminder_id: int,
@@ -117,3 +146,91 @@ def list_reminders(
         .order_by(Reminder.reminder_time.asc())
         .all()
     )
+
+
+from pydantic import BaseModel
+import json
+from google import genai
+from google.genai import types
+from datetime import datetime, timedelta
+from app.config import settings
+
+class SmartReminderRequest(BaseModel):
+    prompt: str
+    
+class SmartReminderResponse(BaseModel):
+    message: str
+    count: int
+
+SMART_SYSTEM_INSTRUCTION = """You are an AI medical assistant.
+The user will describe a medication or appointment schedule in natural language.
+Extract the schedule and return a JSON object with this exact structure:
+{
+  "title": "Short title (e.g. Take Amoxicillin)",
+  "instructions": "Detailed instructions",
+  "daily_times": ["08:00", "20:00"], 
+  "duration_days": 7,
+  "type": "medication"
+}
+If duration is not specified, assume 1. If it's a single event, return one time and 1 duration day.
+For type, use 'medication', 'appointment', or 'custom'.
+Do NOT include markdown formatting, ONLY pure JSON.
+"""
+
+@router.post("/smart", response_model=SmartReminderResponse)
+def create_smart_reminders(
+    payload: SmartReminderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("patient"))
+) -> SmartReminderResponse:
+    if not settings.GEMINI_API_KEY:
+        raise HTTPException(status_code=503, detail="AI service unavailable")
+
+    try:
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        config = types.GenerateContentConfig(
+            system_instruction=SMART_SYSTEM_INSTRUCTION,
+            temperature=0.1,
+            response_mime_type="application/json"
+        )
+        
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[payload.prompt],
+            config=config,
+        )
+        
+        data = json.loads(response.text.strip())
+        
+        title = data.get("title", "Smart Reminder")
+        instructions = data.get("instructions", "")
+        daily_times = data.get("daily_times", ["09:00"])
+        duration = data.get("duration_days", 1)
+        r_type = data.get("type", "custom")
+        
+        count = 0
+        now = datetime.now()
+        for day in range(duration):
+            for time_str in daily_times:
+                try:
+                    h, m = map(int, time_str.split(':'))
+                    reminder_time = now.replace(hour=h, minute=m, second=0, microsecond=0) + timedelta(days=day)
+                    
+                    reminder = Reminder(
+                        patient_id=current_user.id,
+                        title=title,
+                        description=instructions,
+                        reminder_time=reminder_time,
+                        type=r_type,
+                        is_completed=False,
+                        is_recurring=False
+                    )
+                    db.add(reminder)
+                    count += 1
+                except Exception:
+                    continue
+                    
+        db.commit()
+        return SmartReminderResponse(message="Smart reminders generated successfully", count=count)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext';
 import AppShell from './components/Layout/AppShell';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
+import ReceptionPage from './pages/reception/ReceptionPage';
 import DoctorDashboard from './pages/dashboard/DoctorDashboard';
 import PatientDashboard from './pages/dashboard/PatientDashboard';
 import ManageSchedulePage from './pages/schedule/ManageSchedulePage';
@@ -16,6 +17,10 @@ import SharedWithMePage from './pages/documents/SharedWithMePage';
 import QRCodePage from './pages/documents/QRCodePage';
 import RemindersPage from './pages/reminders/RemindersPage';
 import PostVisitSummaryPage from './pages/appointments/PostVisitSummaryPage';
+import MedicalProfilePage from './pages/profile/MedicalProfilePage';
+import OfflineEmergencyPage from './pages/emergency/OfflineEmergencyPage';
+import ExpressIntakePage from './pages/emergency/ExpressIntakePage';
+import HealthTimelinePage from './pages/timeline/HealthTimelinePage';
 
 function ProtectedRoute({ children, allowedRole }) {
   const { user, loading } = useAuth();
@@ -54,6 +59,7 @@ export default function App() {
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<HomePage />} />
+      <Route path="/reception/:clinicId" element={<ReceptionPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
@@ -84,6 +90,22 @@ export default function App() {
       <Route path="/reminders" element={
         <ProtectedRoute allowedRole="patient">
           <AppShell><RemindersPage /></AppShell>
+        </ProtectedRoute>
+      } />
+      <Route path="/medical-profile" element={
+        <ProtectedRoute allowedRole="patient">
+          <AppShell><MedicalProfilePage /></AppShell>
+        </ProtectedRoute>
+      } />
+      <Route path="/emergency" element={
+        <AppShell><OfflineEmergencyPage /></AppShell>
+      } />
+      <Route path="/express-intake" element={
+        <AppShell><ExpressIntakePage /></AppShell>
+      } />
+      <Route path="/timeline" element={
+        <ProtectedRoute>
+          <AppShell><HealthTimelinePage /></AppShell>
         </ProtectedRoute>
       } />
 

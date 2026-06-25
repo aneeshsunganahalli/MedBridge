@@ -56,6 +56,24 @@ const PATIENT_LINKS = [
       </svg>
     ),
   },
+  {
+    to: '/emergency',
+    label: 'Emergency QR',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--color-danger)' }}>
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    ),
+  },
+  {
+    to: '/medical-profile',
+    label: 'Medical Profile',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+      </svg>
+    ),
+  },
 ];
 
 const DOCTOR_LINKS = [
@@ -108,7 +126,40 @@ const DOCTOR_LINKS = [
 
 export default function Sidebar({ collapsed }) {
   const { user } = useAuth();
-  const links = user?.role === 'doctor' ? DOCTOR_LINKS : PATIENT_LINKS;
+  
+  const patientLinks = [
+    ...PATIENT_LINKS.filter(l => l.to !== '/emergency'),
+    {
+      to: '/timeline',
+      label: 'Health Timeline',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      )
+    },
+    { type: 'divider', label: 'Offline Access' },
+    {
+      to: '/emergency',
+      label: 'Emergency SOS',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--color-danger)' }}>
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      )
+    },
+    {
+      to: '/express-intake',
+      label: 'Express Intake',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--color-primary)' }}>
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
+      )
+    }
+  ];
+
+  const links = user?.role === 'doctor' ? DOCTOR_LINKS : patientLinks;
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
@@ -116,16 +167,26 @@ export default function Sidebar({ collapsed }) {
         {!collapsed && (
           <div className="sidebar-section-label">Navigation</div>
         )}
-        {links.map(link => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-          >
-            <span className="sidebar-link-icon">{link.icon}</span>
-            <span className="sidebar-link-text">{link.label}</span>
-          </NavLink>
-        ))}
+        {links.map((link, idx) => {
+          if (link.type === 'divider') {
+            return (
+              <div key={`div-${idx}`}>
+                <div className="sidebar-divider" />
+                {!collapsed && <div className="sidebar-subtitle">{link.label}</div>}
+              </div>
+            );
+          }
+          return (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+            >
+              <span className="sidebar-link-icon">{link.icon}</span>
+              <span className="sidebar-link-text">{link.label}</span>
+            </NavLink>
+          );
+        })}
       </nav>
     </aside>
   );

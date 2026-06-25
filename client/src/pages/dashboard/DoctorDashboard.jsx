@@ -6,7 +6,8 @@ import { SkeletonCard } from '../../components/ui/Skeleton';
 import EmptyState from '../../components/ui/EmptyState';
 import { useToast } from '../../components/ui/Toast';
 import { getDoctorDashboard } from '../../api/dashboard';
-import { completeAppointment } from '../../api/appointments';
+import { completeAppointment, cancelAppointment } from '../../api/appointments';
+import TriageDashboardWidget from '../../components/triage/TriageDashboardWidget';
 import { useNavigate } from 'react-router-dom';
 
 export default function DoctorDashboard() {
@@ -106,6 +107,11 @@ export default function DoctorDashboard() {
 
         <div>
           <div className="section-header">
+            <h2 className="section-title">Live Triage Queue</h2>
+          </div>
+          <TriageDashboardWidget />
+
+          <div className="section-header" style={{ marginTop: '2rem' }}>
             <h2 className="section-title">Recent Appointments</h2>
           </div>
           {data?.recent_appointments?.length ? (

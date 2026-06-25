@@ -6,7 +6,7 @@ import Drawer from '../../components/ui/Drawer';
 import EmptyState from '../../components/ui/EmptyState';
 import { SkeletonCard } from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/Toast';
-import { getReminders, createReminder, updateReminder, deleteReminder } from '../../api/reminders';
+import { getReminders, createReminder, updateReminder, deleteReminder, createSmartReminder } from '../../api/reminders';
 import { formatRelativeTime } from '../../utils/format';
 
 const REMINDER_ICONS = {
@@ -34,6 +34,8 @@ export default function RemindersPage() {
   const [reminders, setReminders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [entryMode, setEntryMode] = useState('smart'); // 'smart' or 'manual'
+  const [smartPrompt, setSmartPrompt] = useState('');
   const [form, setForm] = useState({ title: '', description: '', reminder_time: '', type: 'custom', is_recurring: false, recurrence_pattern: 'daily' });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -54,6 +56,23 @@ export default function RemindersPage() {
   useEffect(() => { load(); }, []);
 
   const handleSave = async () => {
+    if (entryMode === 'smart') {
+      if (!smartPrompt.trim()) { setErrors({ smart: 'Please enter a schedule' }); return; }
+      setSaving(true);
+      try {
+        const res = await createSmartReminder(smartPrompt);
+        toast.success(res.data.message || 'Smart reminders created');
+        setDrawerOpen(false);
+        setSmartPrompt('');
+        load();
+      } catch (err) {
+        toast.error(err.response?.data?.detail || 'Failed to generate reminders');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     if (!form.title.trim()) { setErrors({ title: 'Title is required' }); return; }
     if (!form.reminder_time) { setErrors({ reminder_time: 'Time is required' }); return; }
 
@@ -181,66 +200,106 @@ export default function RemindersPage() {
           </>
         }
       >
-        <Input
-          label="Title *"
-          placeholder="Take morning medication"
-          value={form.title}
-          onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-          error={errors.title}
-        />
-        <Input
-          label="Date & Time *"
-          type="datetime-local"
-          value={form.reminder_time}
-          onChange={e => setForm(f => ({ ...f, reminder_time: e.target.value }))}
-          error={errors.reminder_time}
-        />
-        <div className="form-group">
-          <label className="form-label">Type</label>
-          <div className="role-selector" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-            {TYPES.map(t => (
-              <button
-                key={t}
-                type="button"
-                className={`role-pill ${form.type === t ? 'selected' : ''}`}
-                onClick={() => setForm(f => ({ ...f, type: t }))}
-                style={{ padding: '8px', fontSize: '0.8rem' }}
-              >
-                {TYPE_LABELS[t]}
-              </button>
-            ))}
+        <div className="share-mode-selector" style={{ marginBottom: 16 }}>
+          <div className="share-mode-pills" style={{ display: 'flex', gap: 8, background: 'var(--color-surface)', padding: 4, borderRadius: 8 }}>
+            <button
+              type="button"
+              className={`share-mode-pill ${entryMode === 'smart' ? 'active' : ''}`}
+              onClick={() => { setEntryMode('smart'); setErrors({}); }}
+              style={{ flex: 1, padding: '8px', border: 'none', background: entryMode === 'smart' ? 'var(--color-background)' : 'transparent', borderRadius: 4, cursor: 'pointer', fontWeight: entryMode === 'smart' ? 600 : 400, color: entryMode === 'smart' ? 'var(--color-text)' : 'var(--color-text-secondary)' }}
+            >
+              ✨ Smart AI Entry
+            </button>
+            <button
+              type="button"
+              className={`share-mode-pill ${entryMode === 'manual' ? 'active' : ''}`}
+              onClick={() => { setEntryMode('manual'); setErrors({}); }}
+              style={{ flex: 1, padding: '8px', border: 'none', background: entryMode === 'manual' ? 'var(--color-background)' : 'transparent', borderRadius: 4, cursor: 'pointer', fontWeight: entryMode === 'manual' ? 600 : 400, color: entryMode === 'manual' ? 'var(--color-text)' : 'var(--color-text-secondary)' }}
+            >
+              Manual Entry
+            </button>
           </div>
         </div>
-        <Input
-          label="Description"
-          type="textarea"
-          placeholder="Optional notes..."
-          value={form.description}
-          onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-        />
-        <div className="form-group" style={{ marginTop: '16px' }}>
-          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input
-              type="checkbox"
-              checked={form.is_recurring}
-              onChange={e => setForm(f => ({ ...f, is_recurring: e.target.checked }))}
-              style={{ accentColor: 'var(--color-accent)' }}
+
+        {entryMode === 'smart' ? (
+          <>
+            <div style={{ marginBottom: 16, fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
+              Describe your schedule naturally. Our AI will automatically create all the necessary reminders for you.
+            </div>
+            <Input
+              label="Your Schedule *"
+              type="textarea"
+              placeholder="e.g., Take one amoxicillin pill at 8am and 8pm for 7 days"
+              value={smartPrompt}
+              onChange={e => setSmartPrompt(e.target.value)}
+              error={errors.smart}
+              style={{ minHeight: 120 }}
             />
-            Make this a repeating reminder
-          </label>
-        </div>
-        {form.is_recurring && (
-          <Input
-            label="Repeats"
-            type="select"
-            value={form.recurrence_pattern}
-            onChange={e => setForm(f => ({ ...f, recurrence_pattern: e.target.value }))}
-          >
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="yearly">Yearly</option>
-          </Input>
+          </>
+        ) : (
+          <>
+            <Input
+              label="Title *"
+              placeholder="Take morning medication"
+              value={form.title}
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+              error={errors.title}
+            />
+            <Input
+              label="Date & Time *"
+              type="datetime-local"
+              value={form.reminder_time}
+              onChange={e => setForm(f => ({ ...f, reminder_time: e.target.value }))}
+              error={errors.reminder_time}
+            />
+            <div className="form-group">
+              <label className="form-label">Type</label>
+              <div className="role-selector" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                {TYPES.map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    className={`role-pill ${form.type === t ? 'selected' : ''}`}
+                    onClick={() => setForm(f => ({ ...f, type: t }))}
+                    style={{ padding: '8px', fontSize: '0.8rem' }}
+                  >
+                    {TYPE_LABELS[t]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Input
+              label="Description"
+              type="textarea"
+              placeholder="Optional notes..."
+              value={form.description}
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+            />
+            <div className="form-group" style={{ marginTop: '16px' }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={form.is_recurring}
+                  onChange={e => setForm(f => ({ ...f, is_recurring: e.target.checked }))}
+                  style={{ accentColor: 'var(--color-accent)' }}
+                />
+                Make this a repeating reminder
+              </label>
+            </div>
+            {form.is_recurring && (
+              <Input
+                label="Repeats"
+                type="select"
+                value={form.recurrence_pattern}
+                onChange={e => setForm(f => ({ ...f, recurrence_pattern: e.target.value }))}
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </Input>
+            )}
+          </>
         )}
       </Drawer>
     </PageWrapper>

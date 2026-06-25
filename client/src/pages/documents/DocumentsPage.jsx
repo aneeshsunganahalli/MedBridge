@@ -10,8 +10,8 @@ import { useToast } from '../../components/ui/Toast';
 import { listDocuments, uploadDocument, deleteDocument, viewDocumentFile } from '../../api/documents';
 import { createShareLink, getQrCodeUrl } from '../../api/sharing';
 
-const TAGS = ['all', 'prescription', 'report', 'scan', 'bill', 'discharge_summary', 'other'];
-const TAG_LABELS = { all: 'All', prescription: 'Prescription', report: 'Report', scan: 'Scan', bill: 'Bill', discharge_summary: 'Discharge Summary', other: 'Other' };
+const TAGS = ['all', 'prescription', 'report', 'scan', 'bill', 'discharge_summary', 'medicine_packaging', 'other'];
+const TAG_LABELS = { all: 'All', prescription: 'Prescription', report: 'Report', scan: 'Scan', bill: 'Bill', discharge_summary: 'Discharge Summary', medicine_packaging: 'Medicine Packaging', other: 'Other' };
 
 const DATE_RANGES = [
   { label: 'All Time', value: 'all' },

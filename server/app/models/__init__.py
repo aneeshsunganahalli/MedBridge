@@ -31,6 +31,7 @@ class DocumentTag(str, enum.Enum):
     scan = "scan"
     bill = "bill"
     discharge_summary = "discharge_summary"
+    medicine_packaging = "medicine_packaging"
     other = "other"
 
 
@@ -51,6 +52,12 @@ class User(Base):
     password_hash: str = Column(String(255), nullable=False)
     role: str = Column(SAEnum(UserRole), nullable=False)
     phone: str = Column(String(20), nullable=True)
+    blood_type: str = Column(String(10), nullable=True)
+    allergies: str = Column(Text, nullable=True)
+    emergency_contact_name: str = Column(String(255), nullable=True)
+    emergency_contact_phone: str = Column(String(20), nullable=True)
+    active_medications: str = Column(Text, nullable=True)
+    medical_conditions: str = Column(Text, nullable=True)
     created_at: datetime = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
@@ -193,3 +200,23 @@ class Reminder(Base):
 
     # Relationships
     patient = relationship("User", back_populates="reminders")
+
+
+# ─── Triage Session ──────────────────────────────────────────────────────────
+
+class TriageSession(Base):
+    __tablename__ = "triage_sessions"
+
+    id: int = Column(Integer, primary_key=True, index=True)
+    phone: str = Column(String(20), nullable=False, index=True)
+    clinic_id: int = Column(Integer, ForeignKey("clinics.id"), nullable=False)
+    patient_id: int = Column(Integer, ForeignKey("users.id"), nullable=True)
+    channel: str = Column(String(20), default="sms")  # "sms" or "whatsapp"
+    complaint: str = Column(Text, nullable=True)
+    status: str = Column(String(20), default="pending")  # pending -> responded -> closed
+    created_at: datetime = Column(DateTime, default=datetime.utcnow)
+    updated_at: datetime = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    clinic = relationship("Clinic")
+    patient = relationship("User")

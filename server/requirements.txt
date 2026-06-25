@@ -9,5 +9,6 @@ python-jose[cryptography]
 bcrypt
 qrcode[pil]
 google-genai
+fpdf2
 apscheduler
-pymupdf
+pymupdftwilio
