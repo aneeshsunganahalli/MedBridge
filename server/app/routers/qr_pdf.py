@@ -97,7 +97,26 @@ def generate_pdf_from_qr(payload: str):
     if qr_type == "INTAKE" and "med" in data:
         pdf.chapter_body('Medications', data.get("med"))
         
+    if qr_type == "INTAKE" and "pc" in data:
+        pdf.chapter_body('Pre-appointment Concerns', data.get("pc"))
+        
     pdf.ln(5)
+    
+    if qr_type == "INTAKE" and "st" in data:
+        pdf.chapter_title('Shared Documents')
+        from app.config import settings
+        frontend_url = settings.BACKEND_CORS_ORIGINS[0] if settings.BACKEND_CORS_ORIGINS else "http://localhost:3000"
+        share_url = f"{frontend_url}/shared/{data.get('st')}"
+        
+        pdf.set_font('helvetica', '', 11)
+        pdf.multi_cell(0, 8, "Patient has included documents. Access them securely below:")
+        pdf.set_text_color(41, 128, 185)
+        pdf.set_font('helvetica', 'U', 11)
+        pdf.cell(0, 8, share_url, 0, 1, 'L', link=share_url)
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font('helvetica', '', 11)
+        
+        pdf.ln(5)
         
     # --- Emergency Contacts (SOS Only) ---
     if qr_type == "SOS":

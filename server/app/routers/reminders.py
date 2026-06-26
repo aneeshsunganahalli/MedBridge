@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User, Reminder
 from app.schemas.reminder import ReminderCreate, ReminderUpdate, ReminderResponse
-from app.auth import require_role
+from app.auth import require_role, get_current_user
 
 router = APIRouter(prefix="/api/reminders", tags=["Reminders"])
 
@@ -157,6 +157,7 @@ from app.config import settings
 
 class SmartReminderRequest(BaseModel):
     prompt: str
+    patient_id: int | None = None
     
 class SmartReminderResponse(BaseModel):
     message: str
@@ -181,10 +182,17 @@ Do NOT include markdown formatting, ONLY pure JSON.
 def create_smart_reminders(
     payload: SmartReminderRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("patient"))
+    current_user: User = Depends(get_current_user)
 ) -> SmartReminderResponse:
     if not settings.GEMINI_API_KEY:
         raise HTTPException(status_code=503, detail="AI service unavailable")
+
+    if current_user.role == "doctor":
+        if not payload.patient_id:
+            raise HTTPException(status_code=400, detail="Doctor must provide patient_id")
+        target_patient_id = payload.patient_id
+    else:
+        target_patient_id = current_user.id
 
     try:
         client = genai.Client(api_key=settings.GEMINI_API_KEY)
@@ -217,7 +225,7 @@ def create_smart_reminders(
                     reminder_time = now.replace(hour=h, minute=m, second=0, microsecond=0) + timedelta(days=day)
                     
                     reminder = Reminder(
-                        patient_id=current_user.id,
+                        patient_id=target_patient_id,
                         title=title,
                         description=instructions,
                         reminder_time=reminder_time,

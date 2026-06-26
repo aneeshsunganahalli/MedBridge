@@ -112,7 +112,7 @@ def patient_dashboard(
         .all()
     )
 
-    upcoming_reminders = (
+    upcoming_reminders_all = (
         db.query(Reminder)
         .filter(
             Reminder.patient_id == current_user.id,
@@ -120,9 +120,18 @@ def patient_dashboard(
             Reminder.reminder_time >= now,
         )
         .order_by(Reminder.reminder_time.asc())
-        .limit(10)
         .all()
     )
+
+    seen_groups = set()
+    upcoming_reminders = []
+    for rem in upcoming_reminders_all:
+        key = f"{rem.title}-{rem.type}"
+        if key not in seen_groups:
+            upcoming_reminders.append(rem)
+            seen_groups.add(key)
+        if len(upcoming_reminders) >= 10:
+            break
 
     return PatientDashboard(
         total_documents=total_documents,

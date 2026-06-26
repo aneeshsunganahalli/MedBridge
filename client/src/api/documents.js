@@ -22,8 +22,7 @@ export const viewDocumentFile = async (id) => {
   const res = await client.get(`/api/documents/${id}/file`, {
     responseType: 'blob',
   });
-  const blob = new Blob([res.data], { type: res.headers['content-type'] });
-  const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(res.data);
   window.open(url, '_blank');
 };
 

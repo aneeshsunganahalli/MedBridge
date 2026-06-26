@@ -25,6 +25,8 @@ export default function PostVisitSummaryPage() {
   const [prescriptions, setPrescriptions] = useState('');
 
   // Reminder state
+  const [entryMode, setEntryMode] = useState('smart'); // 'smart' or 'manual'
+  const [smartPrompt, setSmartPrompt] = useState('');
   const [reminderTitle, setReminderTitle] = useState('');
   const [reminderDesc, setReminderDesc] = useState('');
   const [reminderTime, setReminderTime] = useState('');
@@ -66,6 +68,26 @@ export default function PostVisitSummaryPage() {
       toast.error('Failed to save summary.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAddSmartReminder = async () => {
+    if (!smartPrompt.trim()) {
+      toast.error('Schedule prompt is required');
+      return;
+    }
+    setAddingReminder(true);
+    try {
+      const res = await client.post(`/api/reminders/smart`, {
+        prompt: smartPrompt,
+        patient_id: appointment.patient_id
+      });
+      toast.success(res.data.message || 'Smart reminders added for patient!');
+      setSmartPrompt('');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to add smart reminders');
+    } finally {
+      setAddingReminder(false);
     }
   };
 
@@ -180,36 +202,83 @@ export default function PostVisitSummaryPage() {
         <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '16px' }}>Add a specific medication or follow-up reminder directly to the patient's timeline.</p>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div className="two-col" style={{ gap: '16px' }}>
-            <Input 
-              label="Reminder Title (e.g. Take Amoxicillin)" 
-              value={reminderTitle}
-              onChange={e => setReminderTitle(e.target.value)}
-            />
-            <div className="form-group">
-              <label className="form-label">Date & Time</label>
-              <input 
-                type="datetime-local" 
-                className="form-input"
-                value={reminderTime}
-                onChange={e => setReminderTime(e.target.value)}
-              />
+          <div className="share-mode-selector" style={{ marginBottom: 16 }}>
+            <div className="share-mode-pills" style={{ display: 'flex', gap: 8, background: 'var(--color-surface)', padding: 4, borderRadius: 8, width: 'fit-content' }}>
+              <button
+                type="button"
+                className={`share-mode-pill ${entryMode === 'smart' ? 'active' : ''}`}
+                onClick={() => setEntryMode('smart')}
+                style={{ padding: '8px 16px', border: 'none', background: entryMode === 'smart' ? 'var(--color-background)' : 'transparent', borderRadius: 4, cursor: 'pointer', fontWeight: entryMode === 'smart' ? 600 : 400, color: entryMode === 'smart' ? 'var(--color-text)' : 'var(--color-text-secondary)' }}
+              >
+                ✨ Smart AI Entry
+              </button>
+              <button
+                type="button"
+                className={`share-mode-pill ${entryMode === 'manual' ? 'active' : ''}`}
+                onClick={() => setEntryMode('manual')}
+                style={{ padding: '8px 16px', border: 'none', background: entryMode === 'manual' ? 'var(--color-background)' : 'transparent', borderRadius: 4, cursor: 'pointer', fontWeight: entryMode === 'manual' ? 600 : 400, color: entryMode === 'manual' ? 'var(--color-text)' : 'var(--color-text-secondary)' }}
+              >
+                Manual Entry
+              </button>
             </div>
           </div>
-          <Input 
-            label="Additional Instructions" 
-            value={reminderDesc}
-            onChange={e => setReminderDesc(e.target.value)}
-            placeholder="Take with food, etc."
-          />
-          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <Button variant="secondary" loading={addingReminder} onClick={handleAddReminder}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              Add Reminder for Patient
-            </Button>
-          </div>
+
+          {entryMode === 'smart' ? (
+            <>
+              <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
+                Describe the patient's schedule naturally. Our AI will automatically generate the reminders.
+              </div>
+              <Input
+                label="Prescription Schedule"
+                type="textarea"
+                placeholder="e.g., Take one amoxicillin pill at 8am and 8pm for 7 days"
+                value={smartPrompt}
+                onChange={e => setSmartPrompt(e.target.value)}
+                style={{ minHeight: 100 }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <Button variant="primary" loading={addingReminder} onClick={handleAddSmartReminder}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                    <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"/>
+                  </svg>
+                  Generate Reminders
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="two-col" style={{ gap: '16px' }}>
+                <Input 
+                  label="Reminder Title (e.g. Take Amoxicillin)" 
+                  value={reminderTitle}
+                  onChange={e => setReminderTitle(e.target.value)}
+                />
+                <div className="form-group">
+                  <label className="form-label">Date & Time</label>
+                  <input 
+                    type="datetime-local" 
+                    className="form-input"
+                    value={reminderTime}
+                    onChange={e => setReminderTime(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Input 
+                label="Additional Instructions" 
+                value={reminderDesc}
+                onChange={e => setReminderDesc(e.target.value)}
+                placeholder="Take with food, etc."
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <Button variant="secondary" loading={addingReminder} onClick={handleAddReminder}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Add Reminder for Patient
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </PageWrapper>

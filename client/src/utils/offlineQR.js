@@ -62,7 +62,7 @@ export async function generateEmergencyQR(snapshot) {
  * Generates an Express Intake QR payload.
  * Focuses on full context for reception desk.
  */
-export async function generateExpressIntakeQR(snapshot) {
+export async function generateExpressIntakeQR(snapshot, concerns = '', shareToken = null) {
   if (!snapshot || !snapshot.data) return null;
   
   const { data } = snapshot;
@@ -83,15 +83,19 @@ export async function generateExpressIntakeQR(snapshot) {
     bt: safeStr(data.blood_type, 10),
     al: safeStr(data.allergies, 100),
     med: safeStr(data.active_medications, 200),
-    con: safeStr(data.medical_conditions, 200)
+    con: safeStr(data.medical_conditions, 200),
+    pc: safeStr(concerns, 200)
   };
+  if (shareToken) {
+    payload.st = shareToken;
+  }
   
   try {
     const jsonStr = JSON.stringify(payload);
     const base64Str = btoa(unescape(encodeURIComponent(jsonStr)));
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    const pdfUrl = `${baseUrl}/api/qr/pdf?payload=${base64Str}`;
-    return await generateQRDataUrl(pdfUrl);
+    const baseUrl = window.location.origin;
+    const intakeUrl = `${baseUrl}/intake?payload=${base64Str}`;
+    return await generateQRDataUrl(intakeUrl);
   } catch (e) {
     console.error("Intake QR generation failed", e);
     return null;

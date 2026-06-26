@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import PageWrapper from '../../components/Layout/PageWrapper';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -118,11 +118,31 @@ export default function RemindersPage() {
     }
   };
 
-  // Sort: upcoming first, completed last
-  const sorted = [...reminders].sort((a, b) => {
-    if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1;
-    return new Date(a.reminder_time) - new Date(b.reminder_time);
-  });
+  // Group reminders by title to only show the next occurrence
+  const sorted = useMemo(() => {
+    const groups = {};
+    reminders.forEach(rem => {
+      const key = `${rem.title}-${rem.type}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(rem);
+    });
+
+    const displayReminders = [];
+    Object.values(groups).forEach(group => {
+      group.sort((a, b) => new Date(a.reminder_time) - new Date(b.reminder_time));
+      const nextPending = group.find(r => !r.is_completed);
+      if (nextPending) {
+        displayReminders.push(nextPending);
+      } else {
+        displayReminders.push(group[group.length - 1]);
+      }
+    });
+
+    return displayReminders.sort((a, b) => {
+      if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1;
+      return new Date(a.reminder_time) - new Date(b.reminder_time);
+    });
+  }, [reminders]);
 
   if (loading) {
     return <PageWrapper title="Reminders"><SkeletonCard count={4} /></PageWrapper>;

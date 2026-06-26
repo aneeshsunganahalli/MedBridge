@@ -180,7 +180,7 @@ def access_shared_documents(
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Share link has expired")
 
     # Check allowed emails
-    if share_link.allowed_emails:
+    if share_link.allowed_emails and current_user.id != share_link.owner_id:
         allowed_list = share_link.allowed_emails.split(",")
         if current_user.email not in allowed_list:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Your email is not in the allowed list.")
@@ -220,13 +220,20 @@ def access_shared_documents(
         documents=doc_list,
     )
 
+from fastapi.responses import StreamingResponse, FileResponse
+import io
+import logging
+from app.utils.encryption import decrypt_data
+
+logger = logging.getLogger(__name__)
+
 @router.get("/access/{token}/documents/{document_id}/file")
 def get_shared_document_file(
     token: str,
     document_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> FileResponse:
+) -> StreamingResponse:
     """
     Access and download a shared document file using the sharing token.
     Requires login, checks allowed_emails.
@@ -246,7 +253,7 @@ def get_shared_document_file(
         )
 
     # Check allowed emails
-    if share_link.allowed_emails:
+    if share_link.allowed_emails and current_user.id != share_link.owner_id:
         allowed_list = share_link.allowed_emails.split(",")
         if current_user.email not in allowed_list:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
@@ -281,8 +288,17 @@ def get_shared_document_file(
             detail="File not found on disk",
         )
 
-    return FileResponse(
-        path=document.file_path,
+    with open(document.file_path, "rb") as f:
+        encrypted_bytes = f.read()
+
+    try:
+        decrypted_bytes = decrypt_data(encrypted_bytes)
+    except Exception as e:
+        logger.error(f"Failed to decrypt shared document {document.id}: {e}")
+        decrypted_bytes = encrypted_bytes
+
+    return StreamingResponse(
+        io.BytesIO(decrypted_bytes),
         media_type=document.mime_type,
-        filename=document.original_filename,
+        headers={"Content-Disposition": f'inline; filename="{document.original_filename}"'}
     )

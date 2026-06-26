@@ -36,11 +36,11 @@ export default function MedbridgeAI() {
     if (!dragStart.current) return;
     const dx = e.clientX - dragStart.current.startX;
     const dy = e.clientY - dragStart.current.startY;
-    
+
     if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
       setIsDragging(true);
     }
-    
+
     setPosition({
       right: dragStart.current.initRight - dx,
       bottom: dragStart.current.initBottom - dy
@@ -76,8 +76,8 @@ export default function MedbridgeAI() {
       axios.get('/api/documents/', {
         headers: { Authorization: `Bearer ${localStorage.getItem('mb_token')}` }
       })
-      .then(res => setMyDocuments(res.data))
-      .catch(err => console.error('Failed to load documents for AI', err));
+        .then(res => setMyDocuments(res.data))
+        .catch(err => console.error('Failed to load documents for AI', err));
     }
   }, [isOpen]);
 
@@ -96,11 +96,11 @@ export default function MedbridgeAI() {
       if (contextDocId) {
         payload.document_ids = [parseInt(contextDocId, 10)];
       }
-      
+
       const res = await axios.post('/api/ai/chat', payload, {
         headers: { Authorization: `Bearer ${localStorage.getItem('mb_token')}` }
       });
-      
+
       setMessages([...newMsgs, { role: 'model', content: res.data.response }]);
     } catch (err) {
       toast.error('MedbridgeAI is currently unavailable.');
@@ -110,13 +110,13 @@ export default function MedbridgeAI() {
   };
 
   return (
-    <div 
+    <div
       className="medbridge-ai-container"
       style={!isOpen ? { right: `${position.right}px`, bottom: `${position.bottom}px` } : {}}
     >
       {!isOpen ? (
-        <button 
-          className="ai-fab" 
+        <button
+          className="ai-fab"
           onClick={handleClick}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -127,80 +127,80 @@ export default function MedbridgeAI() {
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
           </svg>
-          <span style={{marginLeft: '8px', fontWeight: 'bold'}}>Ask MedbridgeAI</span>
+          <span style={{ marginLeft: '8px', fontWeight: 'bold' }}>Ask MedbridgeAI</span>
         </button>
       ) : (
         <div className="ai-modal-overlay" onClick={() => setIsOpen(false)}>
           <div className="ai-chat-window" onClick={e => e.stopPropagation()}>
-          <div className="ai-chat-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div className="ai-avatar">✨</div>
-              <div>
-                <strong>MedbridgeAI</strong>
-                <div style={{ fontSize: '11px', opacity: 0.8 }}>Triage & Medicine Assistant</div>
+            <div className="ai-chat-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="ai-avatar">✨</div>
+                <div>
+                  <strong>MedbridgeAI</strong>
+                  <div style={{ fontSize: '11px', opacity: 0.8 }}>Triage & Medicine Assistant</div>
+                </div>
               </div>
+              <button className="ai-close-btn" onClick={() => setIsOpen(false)}>✕</button>
             </div>
-            <button className="ai-close-btn" onClick={() => setIsOpen(false)}>✕</button>
-          </div>
-          
-          <div className="ai-chat-messages">
-            {messages.map((msg, idx) => (
-              <div key={idx} className={`ai-msg-row ${msg.role}`}>
-                <div className="ai-bubble">
-                  {msg.role === 'model' ? (
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
-                  ) : (
-                    msg.content
-                  )}
+
+            <div className="ai-chat-messages">
+              {messages.map((msg, idx) => (
+                <div key={idx} className={`ai-msg-row ${msg.role}`}>
+                  <div className="ai-bubble">
+                    {msg.role === 'model' ? (
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    ) : (
+                      msg.content
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-            {loading && (
-              <div className="ai-msg-row model">
-                <div className="ai-bubble loading">
-                  <span className="dot">.</span><span className="dot">.</span><span className="dot">.</span>
+              ))}
+              {loading && (
+                <div className="ai-msg-row model">
+                  <div className="ai-bubble loading">
+                    <span className="dot">.</span><span className="dot">.</span><span className="dot">.</span>
+                  </div>
                 </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {showDocSelector && (
+              <div className="ai-doc-selector">
+                <select
+                  value={selectedDocId}
+                  onChange={(e) => setSelectedDocId(e.target.value)}
+                  className="ai-doc-select-input"
+                >
+                  <option value="">-- Attach a Document Context --</option>
+                  {myDocuments.map(doc => (
+                    <option key={doc.id} value={doc.id}>{doc.title}</option>
+                  ))}
+                </select>
               </div>
             )}
-            <div ref={messagesEndRef} />
-          </div>
 
-          {showDocSelector && (
-            <div className="ai-doc-selector">
-              <select 
-                value={selectedDocId} 
-                onChange={(e) => setSelectedDocId(e.target.value)}
-                className="ai-doc-select-input"
+            <div className="ai-chat-input-area">
+              <button
+                className="ai-icon-btn"
+                onClick={() => setShowDocSelector(!showDocSelector)}
+                title="Attach Document"
               >
-                <option value="">-- Attach a Document Context --</option>
-                {myDocuments.map(doc => (
-                  <option key={doc.id} value={doc.id}>{doc.title}</option>
-                ))}
-              </select>
+                📎
+              </button>
+              <input
+                type="text"
+                placeholder="Describe your symptoms..."
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSend()}
+                disabled={loading}
+              />
+              <button className="ai-send-btn" onClick={() => handleSend()} disabled={loading}>
+                ➤
+              </button>
             </div>
-          )}
-
-          <div className="ai-chat-input-area">
-            <button 
-              className="ai-icon-btn" 
-              onClick={() => setShowDocSelector(!showDocSelector)}
-              title="Attach Document"
-            >
-              📎
-            </button>
-            <input 
-              type="text" 
-              placeholder="Describe your symptoms..." 
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSend()}
-              disabled={loading}
-            />
-            <button className="ai-send-btn" onClick={() => handleSend()} disabled={loading}>
-              ➤
-            </button>
           </div>
-        </div>
         </div>
       )}
     </div>

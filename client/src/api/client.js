@@ -17,6 +17,9 @@ client.interceptors.response.use(
         window.location.href = '/login';
       }
     }
+    if (err.response?.status === 422 && Array.isArray(err.response?.data?.detail)) {
+      err.response.data.detail = err.response.data.detail.map(e => `${e.loc[e.loc.length - 1] || 'Field'}: ${e.msg}`).join(', ');
+    }
     return Promise.reject(err);
   }
 );

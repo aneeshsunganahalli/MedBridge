@@ -20,6 +20,7 @@ import PostVisitSummaryPage from './pages/appointments/PostVisitSummaryPage';
 import MedicalProfilePage from './pages/profile/MedicalProfilePage';
 import OfflineEmergencyPage from './pages/emergency/OfflineEmergencyPage';
 import ExpressIntakePage from './pages/emergency/ExpressIntakePage';
+import ExpressIntakeViewerPage from './pages/emergency/ExpressIntakeViewerPage';
 import HealthTimelinePage from './pages/timeline/HealthTimelinePage';
 
 function ProtectedRoute({ children, allowedRole }) {
@@ -58,9 +59,10 @@ export default function App() {
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/reception/:clinicId" element={<ReceptionPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/reception/:clinicId" element={<ReceptionPage />} />
+      <Route path="/intake" element={<ExpressIntakeViewerPage />} />
 
       {/* Protected routes */}
       <Route path="/dashboard" element={

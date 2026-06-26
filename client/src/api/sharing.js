@@ -10,8 +10,7 @@ export const viewSharedDocumentFile = (token, documentId) =>
   client.get(`/api/sharing/access/${token}/documents/${documentId}/file`, {
     responseType: 'blob'
   }).then(res => {
-    const blob = new Blob([res.data], { type: res.headers['content-type'] });
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(res.data);
     window.open(url, '_blank');
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
@@ -20,8 +19,7 @@ export const downloadSharedDocumentFile = (token, documentId, filename) =>
   client.get(`/api/sharing/access/${token}/documents/${documentId}/file`, {
     responseType: 'blob'
   }).then(res => {
-    const blob = new Blob([res.data], { type: res.headers['content-type'] });
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(res.data);
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
@@ -38,8 +36,7 @@ export const getQrCodeBlobUrl = (token) =>
   client.get(`/api/sharing/qr/${token}`, {
     responseType: 'blob'
   }).then(res => {
-    const blob = new Blob([res.data], { type: res.headers['content-type'] });
-    return URL.createObjectURL(blob);
+    return URL.createObjectURL(res.data);
   });
 
 export const getSharedWithMe = () =>
